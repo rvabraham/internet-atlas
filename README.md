@@ -4,7 +4,9 @@ Find repeated customer workflows in public requests, develop a product thesis an
 
 Two linked graphs share one Codex agent. The app runs on your computer at **http://localhost:3000**.
 
-![Internet Atlas desktop view](docs/atlas.png)
+![Internet Atlas requester graph](docs/business-leads.png)
+
+[Demo sequence and judge questions](docs/demo-runbook.txt)
 
 ## Run
 
