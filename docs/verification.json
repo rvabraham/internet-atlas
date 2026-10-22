@@ -1,8 +1,8 @@
 {
-  "verifiedAt": "2026-10-22T21:00:36.488Z",
+  "verifiedAt": "2026-10-22T21:07:30.505Z",
   "runtime": "http://localhost:3000",
   "sourceBoundary": "All source files in src, server, shared, scripts and data, plus the listed build/configuration inputs. Dependencies resolved by package-lock.json; cached model pinned by revision in seed analysis.",
-  "sourceDigest": "480463d17f12145ee7d786173940efa5a258f33cbd45decd9cd47bfa0f38569d",
+  "sourceDigest": "308ce250a0899bfe0f35dfebfb85dee2f76fc9029d7b5be10448ac966f4981ba",
   "source": [
     {
       "path": "data/seed.json",
@@ -74,11 +74,11 @@
     },
     {
       "path": "src/App.tsx",
-      "sha256": "d545c41d8d1d395dbad247d88e8ca2b3de90e16731d9e2ada44fef68027f8104"
+      "sha256": "d16e3ea4aef3b86266a86033dc77f65d5660cbe08e0a63b892bc9708eb363479"
     },
     {
       "path": "src/Graph.tsx",
-      "sha256": "db8f95e94d8fde142be79a8c217b560f36f55e1bfaa8f532084f9dde55c30093"
+      "sha256": "45c30bfda409a830d4b61958c786c0cd8e2850b9fe603637362f7ee10c9a164c"
     },
     {
       "path": "src/api.ts",
@@ -111,8 +111,8 @@
   ],
   "artifacts": [
     {
-      "path": "/assets/index-DGuP_mOn.js",
-      "sha256": "6cb224683c56944a46c0b629e29acfb8d22af76ef4fb10b83c5aaff353d23bef"
+      "path": "/assets/index-BFWa3mZy.js",
+      "sha256": "657e45113fbe87c6cf3c801c5d3164d68db533b7183edfec60241dcc6dea3ca3"
     },
     {
       "path": "/assets/graph-CP_L6tHG.js",
@@ -137,7 +137,26 @@
     "failed": 0
   },
   "browser": {
-    "intermediateCitationRings": "Two white rings observed on the existing webhook answer",
-    "finalLayout": "Not visually verified. Browser tool reports local browser use disabled."
+    "verdict": "VERIFIED",
+    "scope": [
+      "Loose discovery graph renders without circular boundaries",
+      "Both original webhook citations have white outlines",
+      "Citation selection keeps its node visible beside the source inspector",
+      "Request inspector displays literal authored evidence, recent account count and 10/20/50 tiers",
+      "Use in idea attaches the group’s three original sources"
+    ],
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "sourceBeforeFocusFix": "dd6d205",
+    "baseline": ".atlas/qa/focus-before.png",
+    "screenshots": [
+      "docs/atlas.png",
+      "docs/atlas-citation.png",
+      "docs/atlas-requests.png"
+    ],
+    "consoleErrors": [],
+    "limitations": "No new live collection or model turn was run in this browser pass. Existing backend and model verification is recorded above."
   }
 }

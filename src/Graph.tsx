@@ -29,7 +29,21 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
   useImperativeHandle(ref, () => ({
     fit: () => network.current?.fit({ animation: reduced() ? false : { duration: 350, easingFunction: 'easeInOutQuad' } }),
     zoom: direction => { const n = network.current; if (n) n.moveTo({ scale: Math.max(.15, Math.min(3, n.getScale() * (direction > 0 ? 1.25 : .8))), animation: reduced() ? false : { duration: 180, easingFunction: 'easeInOutQuad' } }); },
-    focus: ids => { const n = network.current; if (!n || !ids.length) return; const found = ids.filter(id => nodeData.current.get(id)); if (!found.length) return; n.selectNodes(found); if (found.length === 1) n.focus(found[0], { scale: 1.05, animation: reduced() ? false : { duration: 400, easingFunction: 'easeInOutQuad' } }); else n.fit({ nodes: found, animation: reduced() ? false : { duration: 400, easingFunction: 'easeInOutQuad' } }); },
+    focus: ids => {
+      const n = network.current; if (!n || !ids.length) return;
+      const found = ids.filter(id => nodeData.current.get(id)); if (!found.length) return;
+      const inspector = element.current?.parentElement?.querySelector('.inspector');
+      const width = element.current?.clientWidth || 1;
+      const panelWidth = inspector?.getBoundingClientRect().width || 0;
+      const offset = { x: panelWidth ? Math.min(panelWidth / 2 + 12, width * .34) : 0, y: 0 };
+      const animation = reduced() ? false : { duration: 400, easingFunction: 'easeInOutQuad' as const };
+      n.selectNodes(found);
+      if (found.length === 1) n.focus(found[0], { scale: 1.05, offset, animation });
+      else {
+        n.fit({ nodes: found, animation: false });
+        n.moveTo({ position: n.getViewPosition(), scale: n.getScale() * Math.max(.3, (width - panelWidth - 40) / width), offset, animation });
+      }
+    },
   }));
   useEffect(() => {
     if (!element.current) return;

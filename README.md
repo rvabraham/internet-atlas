@@ -4,9 +4,7 @@ Find explicit software requests in public discussion, inspect their evidence, sh
 
 Two linked graphs share one Codex agent. The app runs on your computer at **http://localhost:3000**.
 
-![Original v1 interface](docs/atlas.png)
-
-The screenshot shows the original v1 layout. The current graph uses looser neighborhoods and request groups.
+![Internet Atlas desktop view](docs/atlas.png)
 
 ## Run
 
