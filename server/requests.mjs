@@ -2,9 +2,10 @@
 const ASK = /\b(?:i\s+(?:really\s+)?(?:wish|need|want)|we\s+(?:really\s+)?(?:need|want)|i(?:'|’)m looking for|i am looking for|looking for (?:a|an|some|the best)|i(?:'|’)d (?:love|like|pay)|i would (?:love|like|pay)|would (?:love|like) (?:to|a|an|the)|wish (?:there|it|we)|is there (?:a|an|any)|does (?:anyone|anybody) know|can (?:anyone|somebody) recommend|any recommendations for|please (?:add|support|implement|allow|provide)|would be (?:great|nice|useful|helpful) (?:if|to))\b/i;
 const PROMOTION = /\b(?:i (?:built|created|launched)|we (?:built|created|launched)|i(?:'|’)?m (?:the |a |solo )?founder|i am (?:the |a |solo )?founder|our (?:product|platform)|try my (?:app|tool)|looking for (?:beta (?:users|testers)|testers|customers|early adopters)|show hn:)\b/i;
 const ADVICE = /looking for (?:advice|feedback|a co-?founder|investors|funding|a job|work|clients|customers|testers|beta users)/i;
-export const SOFTWARE = /\b(?:software|tool|app|api|saas|workflow|automation|automate|agent|llm|plugin|self.host|database|dashboard|integration|webhook|billing|authentication|notion|obsidian|n8n|docker|code|developer|deploy|crm|email|calendar|spreadsheet)\b/i;
+export const SOFTWARE = /\b(?:software|tool|app|api|saas|workflow|automation|automate|agent|llm|plugin|self.host|database|dashboard|integration|webhook|billing|authentication|notion|obsidian|n8n|docker|code|developer|deploy|crm|email|calendar|spreadsheet|test|testing|flaky|ci|permission|permissions|scheduling|context|retry|retries|sync|synchronization|offline|deduplication|idempotency)\b/i;
 
 export function detectRequest(record) {
+  if (record.source === 'github' && String(record.author).toLowerCase() === 'ghost') return null;
   const title = String(record.title || '');
   let text = String(record.text || '');
   // Issue checklists describe the template, not the requested behavior.
@@ -36,4 +37,14 @@ export function priorityTier(count) {
   if (count >= 20) return { id: 'growing', label: 'Growing', rank: 2, nextAt: 50 };
   if (count >= 10) return { id: 'recurring', label: 'Recurring', rank: 1, nextAt: 20 };
   return { id: 'early', label: 'Early', rank: 0, nextAt: 10 };
+}
+
+export function requestFor(record) {
+  if (record.source === 'github' && String(record.author).toLowerCase() === 'ghost') return null;
+  if (!record.problemAnalysis) return Object.hasOwn(record, 'problemAnalysis') ? null : detectRequest(record);
+  const understood = record.problemAnalysis;
+  if (understood.classification !== 'request' || understood.confidence < .65 || understood.requesterRole === 'vendor' || ['deleted', 'closed', 'resolved', 'removed'].includes(record.status)) return null;
+  const normalize = value => String(value || '').replace(/\s+/g, ' ').trim();
+  if (!normalize(`${record.title}\n${record.text}`).includes(normalize(understood.evidenceQuote))) return null;
+  return { type: 'product_request', quote: understood.evidenceQuote, method: 'problem-understanding', problem: understood.problem, workflow: understood.workflow, desiredOutcome: understood.desiredOutcome };
 }

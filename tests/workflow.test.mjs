@@ -86,7 +86,10 @@ test('shipped corpus has original source URLs, timestamps and no repeated source
     assert.ok(hosts[r.source]?.includes(new URL(r.url).hostname));
     assert.ok(Number.isFinite(Date.parse(r.date))); assert.ok(Number.isFinite(Date.parse(r.fetchedAt)));
     assert.ok(r.text && r.author && r.profileUrl && TOPICS.some(t => t.id === r.topicId));
-    if (r.request) assert.ok(r.text.includes(r.request.quote) || r.request.quote.length <= r.text.length);
+    if (r.request) {
+      const normalize = value => String(value || '').replace(/\s+/g, ' ').trim();
+      assert.ok([r.title, r.text].some(value => normalize(value).includes(normalize(r.request.quote))), `Nonliteral request quote: ${r.id}`);
+    }
   }
 });
 test('Codex turns use GPT 6 Luna even if an older preference or request specifies another model', async () => {
@@ -118,5 +121,23 @@ test('tool upgrades preserve the visible conversation and pass its context to th
     assert.ok(!requests.some(r => r.method === 'thread/resume'));
     assert.ok(requests.find(r => r.method === 'thread/start').params.dynamicTools.some(t => t.name === 'atlas_signals'));
     assert.match(requests.find(r => r.method === 'turn/start').params.input[0].text, /Investigate webhook reliability/);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test('vague discovery cannot replace the chosen idea or clear its leads and drafts', async () => {
+  const directory = await mkdtemp(resolve(tmpdir(), 'atlas-discovery-'));
+  try {
+    const store = await new AtlasStore(directory).load(); store.corpus = corpus;
+    await store.setIdea({ title: 'My existing idea', sourceIds: ['1'] });
+    store.state.leads = [{ id: 'saved-lead', sourceIds: ['1'] }]; store.state.drafts = { saved: { body: 'Keep this draft' } };
+    const original = JSON.stringify({ idea: store.state.idea, leads: store.state.leads, drafts: store.state.drafts });
+    const agent = new AtlasAgent(store, () => {}); agent.connect = async () => {};
+    agent.request = async method => method === 'thread/start' ? { thread: { id: 'discovery' } } : { turn: { id: 'turn' } };
+    await agent.chat('What should I build?');
+    for (const tool of ['atlas_save_idea', 'atlas_find_leads', 'atlas_save_draft']) await assert.rejects(agent.executeTool(tool, { title: 'Unchosen idea' }), /discovery request/);
+    assert.equal(JSON.stringify({ idea: store.state.idea, leads: store.state.leads, drafts: store.state.drafts }), original);
+    agent.active = null;
+    await agent.chat('Save that idea and find leads');
+    assert.equal(agent.active.exploratory, false);
   } finally { await rm(directory, { recursive: true, force: true }); }
 });

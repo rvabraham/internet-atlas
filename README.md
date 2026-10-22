@@ -28,18 +28,18 @@ npm start
 
 ## Use
 
-1. Open **Requests** to inspect grouped asks, requester counts, tiers and original quotes. Use **Topics** or search to explore the wider corpus. Select a source to read its author, date and original post, then pin useful evidence.
-2. Ask Atlas to investigate a problem or collect more requests for a specific need. White rings mark cited sources; click a citation to inspect its evidence. Create or edit an idea with a clear audience, workflow and supporting sources.
-3. Choose **Find people**. Each person connects to their supporting sources. Dashed links indicate inferred relevance.
+1. Open **Requests** to inspect problems, requester counts, tiers and original quotes. Toggle **365d / All time** to explore historical demand with its original dates. Use **Topics** or search to explore the wider corpus. Select a source to read its author, date and original post, then pin useful evidence.
+2. Ask Atlas to investigate a problem or collect more requests for a specific need. Nodes pulse each time Atlas reads or cites them. The final citations stay outlined in white, and the graph frames them together.
+3. Choose **Use in idea**, then **Find leads**. The **Leads** sidebar opens the second graph. It connects the idea to the people who made those requests and their original evidence. You can also create your own idea.
 4. Check a public profile, then draft a DM or email. Edit, save, copy or export the result. The app has no send endpoint.
 
-The same agent stays with both graphs. It reads sources and request groups, runs targeted searches of Hacker News and public Reddit RSS, rebuilds groups, focuses evidence, saves ideas, finds people, checks public profiles and saves drafts. Responses come from the connected model. Provider errors and partial coverage remain visible; the model can be stopped.
+The same agent stays with both graphs. It reads sources and request groups, collects requests from free public sources, rebuilds problems, focuses evidence, saves ideas, finds leads, checks public profiles and saves drafts. Responses come from GPT 6 Luna. Provider errors and partial coverage remain visible; the model can be stopped.
 
 Editing the idea invalidates previous leads and drafts. Drafts are tied to the current idea revision. Saved research can be exported as Markdown.
 
 ## Public data and cost
 
-The October 22, 2026 snapshot contains **3,021 public records and 1,010 detected candidate asks**. No inferred group reaches 10 distinct recent requesters. The app opens the cached snapshot without fetching fresh sources. Curated collections cover agents, retrieval, data infrastructure, testing, observability, integrations, authentication, billing and general software requests. Coverage is a sample, not a census of the internet.
+The October 22, 2026 snapshot contains **3,430 public records, 891 quote-validated requests and 872 indexed problems**, mostly standalone asks. The model analyzed 1,558 of 1,663 candidate posts. The remaining 105 failed validation and stay outside reviewed demand. The largest current group has two distinct recent accounts; the largest historical group has five. No group reaches the recurring tier. The app opens the cached snapshot without fetching fresh sources. Curated collections cover agents, retrieval, data infrastructure, testing, observability, integrations, authentication, billing and general software requests. Coverage is a sample, not a census of the internet.
 
 | Source | Use | Access |
 | --- | --- | --- |
@@ -50,7 +50,18 @@ The October 22, 2026 snapshot contains **3,021 public records and 1,010 detected
 | [Stack Exchange API](https://api.stackexchange.com/docs) | Software Recommendations questions with attribution and license information | Provider quotas and access controls apply; failures surface as unavailable coverage |
 | [Codex app-server](https://developers.openai.com/codex/app-server) | The local agent, using managed ChatGPT authentication | Uses your existing subscription and its usage limits |
 
-No additional paid data or embedding service is required. The local MiniLM model is downloaded on first analysis and cached for reuse. Codex uses your existing subscription limits. Refreshes are paced and preserve previous records when a source fails. The refresh button updates the local cache; `npm run ingest` fetches sources, analyzes requests and rebuilds the versioned seed. `npm run analyze` reanalyzes the cached corpus.
+No additional paid data or embedding service is required. The local MiniLM model is downloaded on first analysis and cached for reuse. GPT 6 Luna extracts and reviews problems through your existing Codex subscription. Bulk analysis consumes subscription usage and can take several minutes. Results are cached by source content, metadata, model and prompt version. Refreshes are paced and preserve previous records when a source fails.
+
+```sh
+# Collect across eight workflow families, or provide repeated --query flags.
+npm run collect -- --query 'webhook reliability' --pages 2
+# Resume missing classifications, review groups and rebuild the seed.
+npm run understand -- --max-new 2000 --concurrency 3
+# Populate only the classification cache without changing the seed.
+npm run understand -- --cache-only --max-new 200
+```
+
+`npm run ingest` refreshes the wider curated sources and analyzes them. `npm run analyze` reanalyzes the cached corpus. Pending or rejected model output is excluded from reviewed demand. Cached work survives a failed run. Do not run two indexers against the same workspace at once. `ATLAS_DIRECTORY` and `PORT` let you run an isolated QA workspace without modifying your saved research.
 
 X is not connected and requires developer-console setup and pay-per-usage API access. No X or LinkedIn dump has been ingested. Traceable external post datasets can be imported with `npm run import`. See [data sources and the import CLI](docs/data-sources.md) for exact flags, required author/post/date/text fields, dataset provenance and license requirements. Profile dumps and synthetic records are not request evidence.
 
@@ -58,13 +69,13 @@ Sources retain their original URLs, public usernames, dates and retrieval timest
 
 ## How the graph works
 
-Explicit ask rules identify candidate product searches and feature requests. Local embeddings from `Xenova/all-MiniLM-L6-v2` group similar needs, with a similarity guard against chaining unrelated requests together. Membership is inferred and needs review against the literal source quotes.
+Explicit ask rules retrieve candidate posts. GPT 6 Luna separates requests from promotions, advice, discussion, endorsements and resolved problems. For each request it extracts the audience, workflow, problem, desired outcome and a literal supporting quote. Validation rejects invented quotes, unsupported claims and unavailable evidence. Local embeddings of those problem descriptions retrieve potential matches. Validated standalone asks remain indexed. A second model pass reviews candidate matches, merging paraphrases and splitting requests that need different solutions. Group membership remains an inference, backed by inspectable quotes.
 
 Tiers count distinct public accounts making explicit requests in the past 365 days: **10+ Recurring, 20+ Growing, 50+ Strong**; smaller groups are Early. Canonical URLs, long copied posts and repeated requests by one account do not inflate the count. Votes, brief endorsements, promotions, bots and closed or removed posts are excluded. Historical and dataset evidence retains its original dates. Accounts on different platforms may belong to the same person. No tier establishes willingness to pay.
 
-The discovery graph contains curated collection hubs, source records, public authors and request groups. Solid links show authorship and collection assignment; dashed links show inferred semantic membership or idea relevance. Detected request sources are larger than general discussion. White rings identify cited evidence. Node size does not measure market size. Stable positions keep inspection from rearranging the map.
+The discovery graph contains curated collection hubs, source records, public authors and request groups. Single-source problems focus their original evidence node. Solid links show authorship and collection assignment; dashed links show inferred semantic membership or idea relevance. Detected request sources are larger than general discussion. White rings identify cited evidence. Node size does not measure market size. Stable positions keep inspection from rearranging the map.
 
-Search and lead ranking combine lexical relevance, collection context, request-group membership and provenance. Public authors may be users, competitors or experts. People are candidates for an interview, not validated customers.
+Selecting a problem retrieves its actual requesters across all group members, including evidence beyond the editor's 30-source attachment limit. Custom ideas first use local semantic matching against reviewed problems. A labeled keyword fallback uses explicit requests if no problem matches. The second graph displays up to 100 accounts and exposes the total match count. Each requester keeps their original quote, source, date and problem link. These are interview candidates, not validated customers.
 
 The agent reads the same records through bounded tools. It can investigate beyond a short excerpt by retrieving the full cached source. Before drafting, it is instructed to check the public profile and refresh supporting evidence. Closed or removed sources are flagged; removed content is redacted locally after a successful recheck. Network failures remain unverified rather than being reported as successful checks.
 

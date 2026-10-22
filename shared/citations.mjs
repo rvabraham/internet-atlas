@@ -16,11 +16,17 @@ export function canonicalSourceUrl(value) {
 }
 
 export function citedSourceIds(text, records) {
-  const index = new Map(records.map(record => [canonicalSourceUrl(record.url), record.id]));
-  const found = new Set();
+  return [...new Set(citedSourceOccurrences(text, records))];
+}
+
+export function citedSourceOccurrences(text, records, complete = true) {
+  const index = new Map(records.map(record => [canonicalSourceUrl(record.url), record.id]).filter(([url]) => url));
+  const found = [];
   for (const match of String(text || '').matchAll(/https?:\/\/[^\s<>"\]\)]+/g)) {
+    // A streamed URL is not a citation until its closing boundary has arrived.
+    if (!complete && match.index + match[0].length === text.length) continue;
     const id = index.get(canonicalSourceUrl(match[0].replace(/[.,;!?]+$/, '')));
-    if (id) found.add(id);
+    if (id) found.push(id);
   }
-  return [...found];
+  return found;
 }

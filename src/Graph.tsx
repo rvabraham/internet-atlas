@@ -26,12 +26,32 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
   const stateRef = useRef(state); stateRef.current = state;
   const referenceKey = referencedIds.join('|');
   const references = useRef(new Set<string>()); references.current = new Set(referencedIds);
+  const pulses = useRef(new Map<string, number[]>()), pulseFrame = useRef<number | null>(null);
+  const hubIds = useRef<string[]>([]);
   useImperativeHandle(ref, () => ({
+    pulse: ids => {
+      const n = network.current; if (!n) return;
+      const now = performance.now();
+      for (const id of new Set(ids)) {
+        if (!nodeData.current.get(id)) {
+          const source = stateRef.current.corpus.records.find(source => source.id === id);
+          if (!source) continue;
+          const owner = stateRef.current.leads.find(lead => lead.sourceIds.includes(id));
+          const origin = owner ? n.getPositions([owner.id])[owner.id] : { x: 0, y: 0 };
+          const [x, y] = normalPair(randomFor(id));
+          const color = stateRef.current.corpus.topics.find(topic => topic.id === source.topicId)?.color || '#aaa';
+          nodeData.current.add({ id, x: (origin?.x || 0) + x * 70, y: (origin?.y || 0) + y * 70, size: 5, color, label: '' });
+          if (owner) edgeData.current.add({ id: `pulse-author:${id}`, from: owner.id, to: id, color: { color: color + '66' } });
+        }
+        pulses.current.set(id, [...(pulses.current.get(id) || []).filter(start => now - start < 1400), now].slice(-4));
+      }
+      n.redraw();
+    },
     fit: () => network.current?.fit({ animation: reduced() ? false : { duration: 350, easingFunction: 'easeInOutQuad' } }),
     zoom: direction => { const n = network.current; if (n) n.moveTo({ scale: Math.max(.15, Math.min(3, n.getScale() * (direction > 0 ? 1.25 : .8))), animation: reduced() ? false : { duration: 180, easingFunction: 'easeInOutQuad' } }); },
     focus: ids => {
       const n = network.current; if (!n || !ids.length) return;
-      const found = ids.filter(id => nodeData.current.get(id)); if (!found.length) return;
+      const found = [...new Set(ids.flatMap(id => nodeData.current.get(id) ? [id] : stateRef.current.corpus.signals?.find(signal => signal.id === id)?.sourceIds || []).filter(id => nodeData.current.get(id)))]; if (!found.length) return;
       const inspector = element.current?.parentElement?.querySelector('.inspector');
       const width = element.current?.clientWidth || 1;
       const panelWidth = inspector?.getBoundingClientRect().width || 0;
@@ -60,7 +80,7 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
     n.on('blurNode', () => { if (element.current) element.current.style.cursor = 'grab'; });
     n.on('afterDrawing', (ctx: CanvasRenderingContext2D) => {
       const scale = n.getScale();
-      const hubs = nodeData.current.get().filter(node => (node as any).atlasHub && !node.hidden);
+      const hubs = hubIds.current.map(id => nodeData.current.get(id)).filter((node): node is NonNullable<typeof node> => node !== null && !node.hidden);
       for (const node of hubs) {
         const position = n.getPositions([node.id!])[node.id!]; if (!position) continue;
         const data = node as any;
@@ -77,8 +97,23 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
         ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.8 / scale;
         ctx.shadowColor = '#ffffff55'; ctx.shadowBlur = 7 / scale; ctx.stroke(); ctx.restore();
       }
+      const now = performance.now();
+      for (const [id, starts] of pulses.current) {
+        const active = starts.filter(start => now - start < (reduced() ? 650 : 1400));
+        if (!active.length) { pulses.current.delete(id); continue; }
+        pulses.current.set(id, active);
+        const node = nodeData.current.get(id), position = n.getPositions([id])[id];
+        if (!node || !position) continue;
+        const age = now - active[active.length - 1];
+        const phase = reduced() ? 1 : (Math.cos(age / 1400 * Math.PI * 6) + 1) / 2;
+        ctx.save(); ctx.globalAlpha = .15 + phase * .85; ctx.beginPath();
+        ctx.arc(position.x, position.y, (node.size || 5) + (5 + phase * 7) / scale, 0, Math.PI * 2);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = (1.5 + phase) / scale;
+        ctx.shadowColor = '#ffffff'; ctx.shadowBlur = phase * 16 / scale; ctx.stroke(); ctx.restore();
+      }
+      if (pulses.current.size && pulseFrame.current === null) pulseFrame.current = requestAnimationFrame(() => { pulseFrame.current = null; if (network.current === n) n.redraw(); });
     });
-    return () => { n.destroy(); network.current = null; lastGraph.current = ''; };
+    return () => { if (pulseFrame.current !== null) cancelAnimationFrame(pulseFrame.current); pulseFrame.current = null; pulses.current.clear(); n.destroy(); network.current = null; lastGraph.current = ''; };
   }, []);
   useEffect(() => {
     const n = network.current; if (!n) return;
@@ -129,9 +164,9 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
     } else if (state.idea) {
       nodes.push({ id: 'idea', label: '', x: 0, y: 0, fixed: true, size: 21, shape: 'diamond', color: { background: '#e1dfd7', border: '#f3f1e7' }, font: { size: 16, color: '#e1dfd7', vadjust: 12 }, borderWidth: 2, mass: 8, atlasHub: true, atlasLabel: short(state.idea.title, 38), atlasColor: '#d0cbbb' } as Node);
       state.leads.forEach((lead, i) => {
-        const topic = topics.find(t => t.id === lead.topicId)!;
-        const angle = i * Math.PI * 2 / state.leads.length - Math.PI / 2;
-        const r = 160 + (i % 2) * 65, x = Math.cos(angle) * r * 1.5, y = Math.sin(angle) * r;
+        const topic = topics.find(t => t.id === lead.topicId) || topics[0];
+        const angle = i * 2.39996 - Math.PI / 2;
+        const r = 135 + Math.sqrt(i + 1) * 66, x = Math.cos(angle) * r * 1.35, y = Math.sin(angle) * r;
         nodes.push({ id: lead.id, label: lead.name, x, y, size: 10 + Math.min(6, lead.sourceIds.length * 1.5), color: { background: topic.color, border: alpha(topic.color, '30'), highlight: { background: topic.color, border: '#ffffff' }, hover: { background: topic.color, border: '#ffffff' } }, borderWidth: 4, font: { size: 12, color: '#c3c1bd', vadjust: 5 } });
         edges.push({ id: `fit:${lead.id}`, from: 'idea', to: lead.id, dashes: [4, 7], color: { color: alpha(topic.color, '38') }, length: r, width: .9 });
         lead.sourceIds.slice(0, 3).forEach((id, j) => {
@@ -142,6 +177,7 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
         });
       });
     }
+    hubIds.current = nodes.filter(node => (node as any).atlasHub).map(node => String(node.id));
     nodeData.current.clear(); edgeData.current.clear(); nodeData.current.add(nodes); edgeData.current.add(edges);
     n.setOptions({ physics: { enabled: false } });
     requestAnimationFrame(() => { if (network.current === n) { n.fit({ animation: false }); onReadyRef.current(); } });
@@ -173,7 +209,8 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
       const matchesTopic = !topicId || signalMap.get(id)?.topicId === topicId || s?.topicId === topicId || topic?.id === topicId || lead?.topicId === topicId || authorSources.some(s => s.topicId === topicId);
       const matchesSource = s ? sourceFilters.includes(s.source) : signalMap.has(id) ? signalMap.get(id)!.sourceIds.some(id => sourceFilters.includes(sourceMap.get(id)?.source || '')) : authorSources.length ? authorSources.some(r => sourceFilters.includes(r.source)) : true;
       const searchTerms = lowerQuery.split(/\s+/).filter(Boolean);
-      const matchesQuery = !lowerQuery || searchTerms.every(term => `${s?.title || ''} ${s?.text || ''} ${lead?.name || ''} ${topic?.name || ''} ${signalMap.get(id)?.label || ''}`.toLowerCase().includes(term));
+      const signal = signalMap.get(id);
+      const matchesQuery = !lowerQuery || searchTerms.every(term => `${s?.title || ''} ${s?.text || ''} ${lead?.name || ''} ${topic?.name || ''} ${signal?.label || ''} ${signal?.workflow || ''} ${signal?.problem || ''} ${signal?.desiredOutcome || ''}`.toLowerCase().includes(term));
       const cited = references.current.has(id);
       return { id, hidden: !cited && !signalMembers?.includes(id) && (!matchesTopic || !matchesSource), opacity: cited ? 1 : neighborhoods ? neighborhoods.has(id) ? 1 : .13 : !matchesQuery ? .12 : 1 };
     });
@@ -181,5 +218,5 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
     if (selected && nodeData.current.get(selected)) n.selectNodes([selected]); else n.unselectAll();
     n.redraw();
   }, [topicId, sourceFilters, selected, query, state, view, referenceKey]);
-  return <div className="graph-canvas" ref={element} aria-label={view === 'discover' ? 'Public evidence graph. Use the topics and evidence list to explore with a keyboard.' : 'People graph. Select a person from the list to inspect their evidence.'} />;
+  return <div className="graph-canvas" ref={element} aria-label={view === 'discover' ? 'Public evidence graph. Use the topics and evidence list to explore with a keyboard.' : 'Leads graph. Select a requester from the list to inspect their evidence.'} />;
 });

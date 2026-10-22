@@ -9,7 +9,7 @@ import { analyzeCorpus } from './signals.mjs';
 const app = express();
 const server = createServer(app);
 const port = Number(process.env.PORT || 3000);
-const store = await new AtlasStore().load();
+const store = await new AtlasStore(process.env.ATLAS_DIRECTORY || undefined).load();
 const clients = new Set();
 const emit = (event, payload) => { for (const client of clients) client.write(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`); };
 const agent = new AtlasAgent(store, emit);

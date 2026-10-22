@@ -1,12 +1,19 @@
 {
-  "verifiedAt": "2026-10-22T21:07:30.505Z",
+  "verifiedAt": "2026-10-22T21:41:57.763Z",
+  "verdict": "VERIFIED",
   "runtime": "http://localhost:3000",
-  "sourceBoundary": "All source files in src, server, shared, scripts and data, plus the listed build/configuration inputs. Dependencies resolved by package-lock.json; cached model pinned by revision in seed analysis.",
-  "sourceDigest": "308ce250a0899bfe0f35dfebfb85dee2f76fc9029d7b5be10448ac966f4981ba",
+  "qaRuntime": "http://localhost:3001",
+  "sourceBoundary": "All files under src, server, shared, scripts, data and tests, plus the listed configuration and lockfile. Documentation and local state are outside the runtime input boundary.",
+  "sourceBaseCommit": "7807901bd03b6700253aa70c554045039741bff3",
+  "sourceDigest": "5157675c4919ee14b3b631a47a8eccda7af7c4c93bc3a3b5dc272866b3e9dad8",
   "source": [
     {
+      "path": ".env.example",
+      "sha256": "ac7e9cf30d6ce84f547ee170de1d0d51984b8a616dcf51f67fce02e62d3da98f"
+    },
+    {
       "path": "data/seed.json",
-      "sha256": "72c27cfe170eabbc1e9102dfae2f5c2736326c2d248c231c117993ff12193000"
+      "sha256": "7da37c327f79586c9216b3e59857afef76a97d6818fec40ae9e9aa9d7bb2a5c4"
     },
     {
       "path": "index.html",
@@ -18,11 +25,15 @@
     },
     {
       "path": "package.json",
-      "sha256": "217366380c6b5b84dee78c9300f4a5ff1f1512b154e4fc233ddc15937e8b05b2"
+      "sha256": "3e25605d98138d8bb746f7d4e289f7658ced435a7fab0ca4b9412a4600523789"
     },
     {
       "path": "scripts/analyze.mjs",
       "sha256": "54053d738c85688e3a50834dc3892d9330fba8156083d9533be9921ae0d370f7"
+    },
+    {
+      "path": "scripts/collect.mjs",
+      "sha256": "df4ef7240a06cdb4513851a5ad8d241369c3d589b6adb48c51a93160159fc5f3"
     },
     {
       "path": "scripts/import.mjs",
@@ -33,12 +44,16 @@
       "sha256": "92e917494af42981468cd9d1d4f35415148450e8c8391ddc98414d4e87ddc938"
     },
     {
+      "path": "scripts/understand.mjs",
+      "sha256": "d21750929332af8c88305c63a0fc7ccb6a39e11b3f5d2bd88168a040dc9a6644"
+    },
+    {
       "path": "server/agent.mjs",
-      "sha256": "bc75585f4c13a014d935ee48f4e3edca43b7420b9ec74d5a0d5c84aa0b3e29ce"
+      "sha256": "e1a61577dbbb714c65ccb095fab63c457f926fde24adf2eddfd48f08f9b9aff7"
     },
     {
       "path": "server/data.mjs",
-      "sha256": "d1c5f5ef578fc81679ba9b1886dbeea7654581f76f7758cabce9c2a150377ec0"
+      "sha256": "bcbf9559660deb2b3cfe5c91adc9b37697e08073698d20b320d15f61bacc6831"
     },
     {
       "path": "server/imports.mjs",
@@ -46,11 +61,19 @@
     },
     {
       "path": "server/index.mjs",
-      "sha256": "7173d743d8c2197ebdf62a79f24e8e3bfc4745cb65707ac5d84b0fa031e18252"
+      "sha256": "0348b21642a27fcec129875e40888a80a255b0ebfdf8056b7a39c807d0dddbaf"
+    },
+    {
+      "path": "server/intelligence.mjs",
+      "sha256": "bfac9768e636a7139aa24571656a86b08ae8fdd14387dad4ec3208aaac016401"
+    },
+    {
+      "path": "server/problems.mjs",
+      "sha256": "1a01bc75075a283a88b87187ef6c75d683e145f9e33f63269baaed9feeee0299"
     },
     {
       "path": "server/requests.mjs",
-      "sha256": "be35749cd014b75428b9a2013d153406ed93285cd1e3450b5e1c2fc2862f9f8d"
+      "sha256": "577b8c8b5a18d1bdeddf98e2769cd8c368ca911f216c6374ae5463e7a99ba5c4"
     },
     {
       "path": "server/security.mjs",
@@ -58,27 +81,27 @@
     },
     {
       "path": "server/signals.mjs",
-      "sha256": "1d8f1d63fd5985c808b76b604c15021873336578e812a0d9a2aad4be395b3342"
+      "sha256": "c1c78712171842021a3c153e4e347c4a3c2bbd4d0db36f5c805b52567dea77f3"
     },
     {
       "path": "server/sources.mjs",
-      "sha256": "1b05398589e08cec831c0997f75ad3be23c5bfafb7d979ca9692d9a7dd920d75"
+      "sha256": "65105572e082cb4940cdfbc25023fdaf6aa173edd6d6ff7cafa89fc761583fbf"
     },
     {
       "path": "shared/citations.d.mts",
-      "sha256": "fe5965c893c29547e37f237a6ff7cf97b85791aad6fe88b73b6b76287572a36a"
+      "sha256": "5577cc252665e0710d1e4e0fb36b60376c38ed3dff1d3ee5f4943c65e5d6ddf4"
     },
     {
       "path": "shared/citations.mjs",
-      "sha256": "1d6af72709244f0634a5fcf28543d880bc19eed6b168aa03e779ad27d2d1abc7"
+      "sha256": "3496916975bb9ab21dc9a79135976ba9ad46af59170d46254d2d84a2f20f9e8e"
     },
     {
       "path": "src/App.tsx",
-      "sha256": "d16e3ea4aef3b86266a86033dc77f65d5660cbe08e0a63b892bc9708eb363479"
+      "sha256": "b19063a63934bb22b7eace99102ce5e9c599500e1a7ebf4263e2dfb1a8714f7a"
     },
     {
       "path": "src/Graph.tsx",
-      "sha256": "45c30bfda409a830d4b61958c786c0cd8e2850b9fe603637362f7ee10c9a164c"
+      "sha256": "4b4044895258f636bbbd8d92d896f0f3982e92dec83b2897efef327d5d7e7e5f"
     },
     {
       "path": "src/api.ts",
@@ -94,11 +117,43 @@
     },
     {
       "path": "src/styles.css",
-      "sha256": "eac98abf918e43fe446f295d1e6f86882ad2fb6954d28703c6babdefe072648d"
+      "sha256": "81d38504a1249ca5ed0e3817c4f20a75967268c1040ff58261447691fa9f2a8e"
     },
     {
       "path": "src/types.ts",
-      "sha256": "82ad19afb5c7d33c24ac2821413c2d63197d6353d343595645d0cdb1b718838c"
+      "sha256": "b13f57772fe882fe15a1ed436cceff84b898a61b11a24952b3b1a7ed73ec0704"
+    },
+    {
+      "path": "tests/agent-references.test.mjs",
+      "sha256": "57f1215a8498e72bcc81391bf3b579cecebe991aee02558876281d873bb41067"
+    },
+    {
+      "path": "tests/collection.test.mjs",
+      "sha256": "a0b64a175e9a98f91681a94a7eeb25aa3ec312969b5b9283ac5d69f454d27c5c"
+    },
+    {
+      "path": "tests/intelligence.test.mjs",
+      "sha256": "fbc311bb042db34f1731e32666eff19e028abf4849db369478c145a0bee7df43"
+    },
+    {
+      "path": "tests/leads.test.mjs",
+      "sha256": "05c89e81b0b3265c9c8bc89bba82b708987f710205af9c9d440b83fde6a3bbee"
+    },
+    {
+      "path": "tests/problem-index.test.mjs",
+      "sha256": "b4dc4372f39702bfa21a0041bfca1561404a1470b57d48e62c1cbbecc5938ce0"
+    },
+    {
+      "path": "tests/problems.test.mjs",
+      "sha256": "ec0f0792370ba72c4ced9efcf70e0910ec954d683ec081acca6dca8c41ca880f"
+    },
+    {
+      "path": "tests/signals.test.mjs",
+      "sha256": "e7e1cbe7881f089fc296c975c913cd5e875bbd84e7904c4fc6887e2a5f121dfc"
+    },
+    {
+      "path": "tests/workflow.test.mjs",
+      "sha256": "ac4b08e605bf2a20be92d68e3791a4b836f3fc7885831da1e3983caa63a47345"
     },
     {
       "path": "tsconfig.json",
@@ -111,52 +166,102 @@
   ],
   "artifacts": [
     {
-      "path": "/assets/index-BFWa3mZy.js",
-      "sha256": "657e45113fbe87c6cf3c801c5d3164d68db533b7183edfec60241dcc6dea3ca3"
+      "path": "index.html",
+      "sha256": "4e1566868861fe14bcc0419ba0a4fca1f66a207efff1c42a439291e73439bd96",
+      "bytes": 584
     },
     {
-      "path": "/assets/graph-CP_L6tHG.js",
-      "sha256": "3696027c4958710564fbad1d383f40d1d3a362a28c24108c6f6c23ff21384892"
+      "path": "assets/geist-mono-latin-400-normal-B2yvC1Cq.woff",
+      "sha256": "ec7ecd39327c39a2b2792c8b402d094619b6c1e517a74420cde8fd67a71ed083",
+      "bytes": 13044
     },
     {
-      "path": "/assets/index-DvmxTQDi.css",
-      "sha256": "06c0b71e460e065a40967981c61261faa95e87dc405bf3f037d3b0bb7b6673f2"
+      "path": "assets/geist-mono-latin-400-normal-DTRLJnHl.woff2",
+      "sha256": "3f98383b122fe015a48536cd4a1cda855a201718923ffe74931a01597107b9b5",
+      "bytes": 9864
+    },
+    {
+      "path": "assets/geist-mono-latin-500-normal-D-GG86Jb.woff",
+      "sha256": "04dde39e58d3539d8a8933f649c556887984c89efe1d1da53c8bb2412da12138",
+      "bytes": 13336
+    },
+    {
+      "path": "assets/geist-mono-latin-500-normal-YINYabwD.woff2",
+      "sha256": "72971bd4908d3984fa1b1426bb363730e4957e16a0f58bfbca76993095715488",
+      "bytes": 10116
+    },
+    {
+      "path": "assets/geist-mono-latin-600-normal-V-KvD_pi.woff2",
+      "sha256": "8b111a81bab818cf5393b81149c69d6a1756f3acc3a846decafef01974d12bd3",
+      "bytes": 10144
+    },
+    {
+      "path": "assets/geist-mono-latin-600-normal-bZn07FKM.woff",
+      "sha256": "0b8148ae59799737964430c2d4f0656e65f8a190185ce7dc2d1094d69bce5202",
+      "bytes": 13328
+    },
+    {
+      "path": "assets/graph-CP_L6tHG.js",
+      "sha256": "3696027c4958710564fbad1d383f40d1d3a362a28c24108c6f6c23ff21384892",
+      "bytes": 537867
+    },
+    {
+      "path": "assets/index-DRYqTrXs.css",
+      "sha256": "e560a0400412caddb01ac4ca76d22de43a080d27c46eca11c4c4492b35538b52",
+      "bytes": 30600
+    },
+    {
+      "path": "assets/index-DuvGDw7X.js",
+      "sha256": "200771462308857a4405046f32dead66e0969d55ce11a5c73dd5bbfde0714062",
+      "bytes": 413081
     }
   ],
-  "records": 3021,
-  "requests": 1010,
-  "groups": 1001,
-  "maxRequesters": 3,
-  "embeddingRevision": "751bff37182d3f1213fa05d7196b954e230abad9",
-  "savedConversation": {
+  "userState": {
+    "sha256": "fdff0da14e6b64966f9fa9efb94de09405e7592e18aad69f73ac4ba9204dce4d",
     "messages": 2,
-    "unchanged": true
+    "idea": null,
+    "leads": 0,
+    "drafts": 0
   },
-  "tests": {
-    "passed": 36,
-    "failed": 0
+  "data": {
+    "records": 3430,
+    "method": "problem-understanding-and-review",
+    "model": "gpt-6-luna",
+    "embeddingModel": "Xenova/all-MiniLM-L6-v2",
+    "revision": "751bff37182d3f1213fa05d7196b954e230abad9",
+    "generatedAt": "2026-10-22T21:37:24.488Z",
+    "candidateCount": 1663,
+    "analyzedCount": 1558,
+    "pendingCount": 105,
+    "requestCount": 891,
+    "groupedRequestCount": 889,
+    "distinctAuthors": 722,
+    "signalCount": 872,
+    "thresholds": [
+      10,
+      20,
+      50
+    ],
+    "windowDays": 365,
+    "classification": "quote-validated-model-analysis",
+    "status": "partial",
+    "validationRejects": 1,
+    "errors": [],
+    "fingerprint": "3987f6709fa957b83ddd435c9c79846d19d1f1291d190a7784e3432596ed03d0"
   },
-  "browser": {
-    "verdict": "VERIFIED",
-    "scope": [
-      "Loose discovery graph renders without circular boundaries",
-      "Both original webhook citations have white outlines",
-      "Citation selection keeps its node visible beside the source inspector",
-      "Request inspector displays literal authored evidence, recent account count and 10/20/50 tiers",
-      "Use in idea attaches the group’s three original sources"
-    ],
-    "viewport": {
-      "width": 1280,
-      "height": 720
-    },
-    "sourceBeforeFocusFix": "dd6d205",
-    "baseline": ".atlas/qa/focus-before.png",
-    "screenshots": [
-      "docs/atlas.png",
-      "docs/atlas-citation.png",
-      "docs/atlas-requests.png"
-    ],
-    "consoleErrors": [],
-    "limitations": "No new live collection or model turn was run in this browser pass. Existing backend and model verification is recorded above."
-  }
+  "checks": {
+    "tests": 93,
+    "productionBuild": "passed",
+    "servedArtifactHashes": "matched",
+    "browserErrors": 0,
+    "viewports": [
+      "1280x720",
+      "592x827"
+    ]
+  },
+  "limitations": [
+    "Dataset coverage is partial; 105 candidate posts remain outside validated demand.",
+    "Transient pulse timing has event-level tests and live traces; saved still images show final outlines and framing.",
+    "GitHub profile recheck hit403 in isolated draft test; no contact details were inferred."
+  ]
 }

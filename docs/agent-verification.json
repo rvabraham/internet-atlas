@@ -1,0 +1,74 @@
+{
+  "prompt": "What should I build?",
+  "model": "gpt-6-luna",
+  "tools": [
+    "atlas_signals",
+    "atlas_overview",
+    "atlas_signals",
+    "atlas_signals",
+    "atlas_signals",
+    "atlas_get_signal",
+    "atlas_get_signal",
+    "atlas_get_signal",
+    "atlas_search",
+    "atlas_focus"
+  ],
+  "references": [
+    {
+      "nodeIds": [
+        "signal:8554136d022a8249b2",
+        "reddit:t3_1wthb4o",
+        "reddit:t3_1wti41m"
+      ],
+      "kind": "read"
+    },
+    {
+      "nodeIds": [
+        "signal:e7d02a9677c1e25b2d",
+        "gh:3647122172",
+        "gh:comment:3916303102",
+        "gh:comment:4637374988",
+        "gh:comment:4637421598"
+      ],
+      "kind": "read"
+    },
+    {
+      "nodeIds": [
+        "signal:0faa9488a26109c459",
+        "gh:comment:1012142904",
+        "gh:comment:1385021800",
+        "gh:comment:1466100126",
+        "gh:comment:3569548911",
+        "gh:comment:847270235"
+      ],
+      "kind": "read"
+    },
+    {
+      "nodeIds": [
+        "gh:3647122172",
+        "gh:comment:3916303102",
+        "gh:comment:4637374988"
+      ],
+      "kind": "focus"
+    },
+    {
+      "nodeIds": [
+        "gh:3647122172"
+      ],
+      "kind": "citation"
+    }
+  ],
+  "final": {
+    "id": "95a01ba0-c556-4ba8-ad80-e85df81f613d",
+    "role": "assistant",
+    "text": "Build a **per-user credential layer for shared MCP servers**: an admin configures one server template, while each user securely supplies their own API key, with secrets injected only into approved headers or URL paths. That targets a concrete multi-user workflow: avoiding shared keys, duplicate server configs, or a custom proxy.\n\nThe strongest evidence is an [open Open WebUI feature request](https://github.com/open-webui/open-webui/issues/19313): its author asks for personal credentials on a globally configured MCP server, and another commenter describes using separate configurations or a proxy for users’ individual Pappers API keys. The group has **2 distinct requesters in the last 365 days**, an **Early** signal, not proof of market size or willingness to pay. I also reviewed requests about real-device Playwright testing and Discord event webhooks; those are narrower, similarly early asks. GitHub requests may be feature requests rather than buying intent.\n\nA useful first test: interview multi-user Open WebUI admins about how they currently handle MCP credentials and whether that workaround is painful enough to replace.",
+    "sourceIds": [
+      "gh:3647122172"
+    ],
+    "error": null,
+    "createdAt": "2026-10-22T21:40:34.252Z"
+  },
+  "idea": null,
+  "leads": 0,
+  "drafts": 0
+}

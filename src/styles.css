@@ -9,6 +9,8 @@
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 .model-name{font-size:9px;color:#959184;padding:5px 2px}.attached-sources>div>button{margin-left:auto;display:flex;padding:4px;color:#7d7461}.composer textarea{resize:none}.brand{font-size:14.5px;letter-spacing:-.6px}@media(max-width:1190px){.brand{font-size:14px}}@media(max-width:980px){.brand{font-size:13px}}
+.attached-problems{margin:18px 0 8px}.attached-problems>div{display:flex;gap:12px;align-items:center;padding:12px 14px;border:1px solid #ffffff12;background:#ffffff03;border-radius:11px;font-size:11px;color:#bbb8ae}.attached-problems span{flex:1;line-height:1.7}.attached-problems small{display:block;color:#77756d;font-size:9px}.attached-problems button{padding:5px;color:#77756d}.refresh-row>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
+.collection-tabs{gap:11px}.collection-tabs>.request-window{margin-left:auto;font-size:8px!important;color:#89877d!important;white-space:nowrap}.collection-tabs:has(.request-window)>.icon-button{margin-left:0}
 
 .chat-message.user .message-content{border-radius:14px}.draft-editor textarea{resize:none}
 

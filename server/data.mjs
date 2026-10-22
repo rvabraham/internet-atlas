@@ -2,7 +2,8 @@ import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { citedSourceIds } from '../shared/citations.mjs';
-import { recountSignals } from './signals.mjs';
+import { recountSignals, embedTexts, cosine } from './signals.mjs';
+import { requestFor } from './requests.mjs';
 
 export const ROOT = resolve(import.meta.dirname, '..');
 export const TOPICS = [
@@ -62,7 +63,69 @@ export function searchRecords(corpus, query, limit = 18, topicId) {
   return result.slice(0, Math.max(1, Math.min(100, limit)));
 }
 
-export function rankLeads(corpus, idea, limit = 15) {
+const unavailableLeadSource = (record, now = Date.now()) => record.synthetic || ['deleted', 'removed', 'closed', 'resolved'].includes(record.status) || typeof record.authorId !== 'string' || !record.authorId || typeof record.author !== 'string' || !record.author || /\[deleted\]|\[bot\]|^AutoModerator$/i.test(record.author) || record.source === 'github' && /^ghost$/i.test(record.author) || !Number.isFinite(Date.parse(record.date)) || Date.parse(record.date) > now;
+const normalizedQuote = value => String(value || '').replace(/\s+/g, ' ').trim();
+const accountId = record => {
+  const id = record.authorId.startsWith(`${record.source}:`) ? record.authorId : `${record.source}:${record.authorId}`;
+  return ['github', 'reddit', 'x'].includes(record.source) ? id.toLowerCase() : id;
+};
+const reviewedProblems = corpus => (corpus.signals || []).filter(group => group.reviewed && group.id && Array.isArray(group.sourceIds) && (group.confidence === undefined || group.confidence >= .65));
+
+export function selectedProblemIds(corpus, idea) {
+  const groups = new Map(reviewedProblems(corpus).map(group => [group.id, group]));
+  const attached = new Set(Array.isArray(idea.sourceIds) ? idea.sourceIds : []);
+  const inferred = corpus.records.filter(record => attached.has(record.id) && groups.get(record.signalId)?.sourceIds.includes(record.id)).map(record => record.signalId);
+  return [...new Set([...(Array.isArray(idea.problemIds) ? idea.problemIds : []), ...inferred])].filter(id => groups.has(id));
+}
+
+function eligibleRequest(record, now) {
+  if (unavailableLeadSource(record, now)) return null;
+  const request = requestFor(record);
+  if (!request || request.type === 'endorsement') return null;
+  const quote = normalizedQuote(request.quote);
+  if (!quote || ![record.title, record.text].some(text => normalizedQuote(text).includes(quote))) return null;
+  return request;
+}
+
+function requesterLeads(corpus, idea, problemMatches, limit, now) {
+  const records = new Map(corpus.records.map(record => [record.id, record]));
+  const problems = new Map(reviewedProblems(corpus).map(group => [group.id, group]));
+  const byAuthor = new Map();
+  for (const match of problemMatches) {
+    const group = problems.get(match.problemId);
+    if (!group) continue;
+    for (const sourceId of new Set(group.sourceIds)) {
+      const record = records.get(sourceId);
+      if (!record) continue;
+      const request = eligibleRequest(record, now);
+      if (!request) continue;
+      const id = accountId(record);
+      const score = (match.matchKind === 'selected-problem' ? 1000 : match.similarity * 100) + (record.problemAnalysis?.confidence || .65) + Math.max(0, 1 - (now - Date.parse(record.date)) / (365 * 86400000));
+      const evidence = { sourceId, quote: request.quote, problemId: group.id, date: record.date, url: record.url };
+      const existing = byAuthor.get(id);
+      if (existing) {
+        if (!existing.sourceIds.includes(sourceId)) { existing.sourceIds.push(sourceId); existing.requestEvidence.push(evidence); }
+        if (!existing.problemIds.includes(group.id)) existing.problemIds.push(group.id);
+        existing.rank = Math.max(existing.rank, score);
+        if (match.similarity !== undefined) existing.matchScore = Math.max(existing.matchScore || 0, match.similarity);
+      } else byAuthor.set(id, { id, name: record.author, source: record.source, profileUrl: record.profileUrl || record.url, sourceIds: [sourceId], rank: score, topicId: record.topicId, ideaRevision: idea.revision, kind: 'Requester', problemIds: [group.id], matchKind: match.matchKind, ...(match.similarity === undefined ? {} : { matchScore: match.similarity }), evidenceQuote: request.quote, requestEvidence: [evidence] });
+    }
+  }
+  return [...byAuthor.values()].sort((a, b) => b.rank - a.rank || a.id.localeCompare(b.id)).slice(0, limit).map(({ rank, ...lead }) => lead);
+}
+
+/** Semantic retrieval identifies candidate problems, never creates request evidence or purchase intent. */
+export async function matchIdeaProblems(corpus, idea, directory, { embed = embedTexts, threshold = .58, limit = 5 } = {}) {
+  const groups = reviewedProblems(corpus);
+  if (!groups.length) return [];
+  const texts = [`${idea.title}. ${idea.description || ''}`, ...groups.map(group => `${group.workflow || group.label}. ${group.problem || group.label}. Desired outcome: ${group.desiredOutcome || group.label}`)];
+  const vectors = await embed(texts, directory);
+  if (!Array.isArray(vectors) || vectors.length !== texts.length || !vectors[0]?.length || vectors.some(vector => !Array.isArray(vector) || vector.length !== vectors[0].length || vector.some(value => !Number.isFinite(value)))) throw new Error('Local semantic matching returned invalid vectors.');
+  return groups.map((group, index) => ({ problemId: group.id, similarity: cosine(vectors[0], vectors[index + 1]), matchKind: 'semantic-problem' })).filter(match => match.similarity >= threshold).sort((a, b) => b.similarity - a.similarity).slice(0, Math.max(1, Math.min(20, limit)));
+}
+
+/** Legacy keyword evidence stays labeled; analyzed nonrequests can never become requesters. */
+function keywordLeads(corpus, idea, limit, now, requestOnly) {
   const evidence = corpus.records.filter(r => idea.sourceIds.includes(r.id));
   const inferredTopic = idea.topicId || evidence[0]?.topicId;
   const ranked = searchRecords(corpus, `${idea.title} ${idea.description}`, 100, undefined);
@@ -70,22 +133,33 @@ export function rankLeads(corpus, idea, limit = 15) {
   const titleTerms = keywords(idea.title);
   const relatedSignals = new Set(evidence.map(record => record.signalId).filter(Boolean));
   for (const record of ranked) {
-    if (record.status === 'deleted' || record.status === 'closed') continue;
+    if (unavailableLeadSource(record, now) || record.problemAnalysis && (record.problemAnalysis.classification !== 'request' || record.problemAnalysis.requesterRole === 'vendor' || record.problemAnalysis.confidence < .65)) continue;
+    const request = eligibleRequest(record, now);
+    if (requestOnly && !request) continue;
     const recordWords = new Set(tokens(`${record.title} ${record.text}`));
     const titleOverlap = titleTerms.filter(t => recordWords.has(t)).length;
     if (!titleOverlap && record.score < 3) continue;
     const sharesTool = /\b(?:i (?:am|'m) the founder|i (?:built|created|launched)|we (?:built|created|launched)|our (?:tool|product|platform))\b/i.test(record.text);
-    const kind = sharesTool ? 'Shares a tool' : record.request && record.request.type !== 'endorsement' ? 'Requested a solution' : record.source === 'github' ? 'Issue author' : 'Discussant';
+    const kind = request ? 'Requester' : sharesTool ? 'Shares a tool' : record.source === 'github' ? 'Issue author' : 'Discussant';
     const score = (record.score + titleOverlap * 3 + (record.topicId === inferredTopic ? 1 : 0) + (record.request ? 3 : 0) + (relatedSignals.has(record.signalId) ? 8 : 0)) * (sharesTool ? .25 : 1);
     if (score < 1) continue;
-    const existing = byAuthor.get(record.authorId);
+    const id = accountId(record), existing = byAuthor.get(id);
     if (existing) { existing.sourceIds.push(record.id); existing.rank += score * 0.15; }
-    else byAuthor.set(record.authorId, { id: record.authorId, name: record.author, source: record.source, profileUrl: record.profileUrl, sourceIds: [record.id], rank: score, topicId: record.topicId, ideaRevision: idea.revision, kind });
+    else byAuthor.set(id, { id, name: record.author, source: record.source, profileUrl: record.profileUrl, sourceIds: [record.id], rank: score, topicId: record.topicId, ideaRevision: idea.revision, kind, problemIds: [], matchKind: request ? 'keyword-request' : 'keyword-evidence', ...(request ? { evidenceQuote: request.quote, requestEvidence: [{ sourceId: record.id, quote: request.quote, problemId: null, date: record.date, url: record.url }] } : {}) });
   }
   return [...byAuthor.values()].sort((a, b) => b.rank - a.rank).slice(0, limit).map(({ rank, ...lead }) => lead);
 }
 
-export function initialState() { return { idea: null, leads: [], drafts: {}, profiles: {}, messages: [], threadId: null, pinned: [], selectedModel: null }; }
+export function rankLeads(corpus, idea, limit, { problemMatches = [], now = Date.now() } = {}) {
+  const selected = selectedProblemIds(corpus, idea).map(problemId => ({ problemId, matchKind: 'selected-problem' }));
+  const matches = selected.length ? selected : problemMatches;
+  const modern = reviewedProblems(corpus).length > 0 || corpus.records.some(record => Object.hasOwn(record, 'problemAnalysis'));
+  const boundedLimit = Math.max(1, Math.min(corpus.records.length, limit ?? (modern || matches.length ? 100 : 15)));
+  if (matches.length) return requesterLeads(corpus, idea, matches, boundedLimit, now);
+  return keywordLeads(corpus, { ...idea, sourceIds: idea.sourceIds || [] }, boundedLimit, now, modern);
+}
+
+export function initialState() { return { idea: null, leads: [], leadSearch: null, drafts: {}, profiles: {}, messages: [], threadId: null, pinned: [], selectedModel: null }; }
 const referencedSources = (state, records) => new Set([...state.pinned, ...(state.idea?.sourceIds || []), ...state.leads.flatMap(l => l.sourceIds), ...state.messages.flatMap(m => [...(m.sourceIds || []), ...citedSourceIds(m.text, records)])]);
 export class AtlasStore {
   constructor(directory = resolve(ROOT, '.atlas')) { this.directory = directory; this.state = initialState(); this.corpus = { topics: TOPICS, records: [], status: [] }; this.queue = Promise.resolve(); }
@@ -134,15 +208,30 @@ export class AtlasStore {
   async setIdea(input) {
     const title = String(input.title || '').trim().slice(0, 160);
     if (!title) throw new Error('Give your idea a name.');
-    const sourceIds = [...new Set(input.sourceIds || [])].filter(id => this.source(id)).slice(0, 30);
-    this.state.idea = { id: this.state.idea?.id || randomUUID(), title, description: String(input.description || '').trim().slice(0, 3000), sourceIds, topicId: TOPICS.some(t => t.id === input.topicId) ? input.topicId : this.source(sourceIds[0])?.topicId || null, revision: (this.state.idea?.revision || 0) + 1, updatedAt: new Date().toISOString() };
+    const attachedSourceIds = [...new Set(Array.isArray(input.sourceIds) ? input.sourceIds : [])].filter(id => this.source(id));
+    const sourceIds = attachedSourceIds.slice(0, 30);
+    const problemIds = selectedProblemIds(this.corpus, { sourceIds: attachedSourceIds, problemIds: input.problemIds });
+    this.state.idea = { id: this.state.idea?.id || randomUUID(), title, description: String(input.description || '').trim().slice(0, 3000), sourceIds, problemIds, topicId: TOPICS.some(t => t.id === input.topicId) ? input.topicId : this.source(sourceIds[0])?.topicId || null, revision: (this.state.idea?.revision || 0) + 1, updatedAt: new Date().toISOString() };
     this.state.leads = [];
+    this.state.leadSearch = null;
     this.state.drafts = {};
     await this.save(); return this.state.idea;
   }
-  async findLeads() {
+  async findLeads({ embed = embedTexts } = {}) {
     if (!this.state.idea) throw new Error('Create an idea first.');
-    this.state.leads = rankLeads(this.corpus, this.state.idea);
+    const idea = this.state.idea, corpus = this.corpus;
+    const selected = selectedProblemIds(corpus, idea);
+    const modern = reviewedProblems(corpus).length > 0 || corpus.records.some(record => Object.hasOwn(record, 'problemAnalysis'));
+    let problemMatches = [], error = null;
+    if (!selected.length && reviewedProblems(corpus).length) {
+      try { problemMatches = await matchIdeaProblems(corpus, idea, this.directory, { embed }); }
+      catch (failure) { error = failure.message; }
+    }
+    if (this.state.idea?.revision !== idea.revision || this.corpus !== corpus) throw new Error('The idea or atlas changed. Find leads again.');
+    const matches = selected.length ? selected.map(problemId => ({ problemId, matchKind: 'selected-problem' })) : problemMatches;
+    const all = rankLeads(corpus, idea, matches.length ? corpus.records.length : modern ? 100 : 15, { problemMatches });
+    this.state.leads = all.slice(0, 100);
+    this.state.leadSearch = { method: selected.length ? 'selected-problem' : problemMatches.length ? 'semantic-problem' : modern ? 'keyword-request' : 'keyword-evidence', problemIds: matches.map(match => match.problemId), ...(selected.length ? {} : { threshold: .58 }), totalMatches: all.length, displayedCount: this.state.leads.length, status: error ? 'embedding-unavailable' : matches.length ? 'matched' : modern ? 'no-problem-match' : 'legacy', ...(error ? { error } : {}) };
     await this.save(); return this.state.leads;
   }
   async researchLead(id) {
