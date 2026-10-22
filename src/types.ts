@@ -1,0 +1,11 @@
+export type Topic = { id: string; name: string; color: string; terms: string[] };
+export type Source = { id: string; source: 'hn' | 'github'; topicId: string; title: string; text: string; author: string; authorId: string; profileUrl: string; url: string; date: string; fetchedAt: string; updatedAt?: string; status: string; replies: number; repository?: string };
+export type Idea = { id: string; title: string; description: string; sourceIds: string[]; topicId: string | null; revision: number; updatedAt: string };
+export type Lead = { id: string; name: string; source: 'hn' | 'github'; profileUrl: string; sourceIds: string[]; topicId: string; ideaRevision: number; kind?: string };
+export type Profile = { name: string; displayName?: string; bio?: string; company?: string; email?: string; website?: string; fetchedAt: string; status: string; sourceChecks: { sourceId: string; status: string; checkedAt?: string }[] };
+export type Draft = { leadId: string; channel: 'dm' | 'email'; subject: string; body: string; recipient: string; ideaRevision: number; updatedAt: string };
+export type Message = { id: string; role: 'user' | 'assistant'; text: string; error?: string | null; createdAt?: string };
+export type AtlasState = { corpus: { records: Source[]; topics: Topic[]; fetchedAt: string; status: { topicId: string; hn: string; github: string }[] }; idea: Idea | null; leads: Lead[]; profiles: Record<string, Profile>; drafts: Record<string, Draft>; pinned: string[]; messages: Message[]; selectedModel: string | null };
+export type AgentInfo = { status: string; error: string | null; models: { id: string; model: string; name: string; isDefault: boolean }[]; busy: boolean; accountType?: string; compatible?: boolean };
+export type View = 'discover' | 'people';
+export type GraphHandle = { fit: () => void; zoom: (direction: number) => void; focus: (ids: string[]) => void };
