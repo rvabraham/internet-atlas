@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { collectProblemRequests, problemQueryPlan, parseRedditFeed } from '../server/sources.mjs';
+import { collectProblemRequests, problemQueryPlan, parseRedditFeed, authoredPlainText, hnRecord, createPublicCollectorClient } from '../server/sources.mjs';
 
 const hit = (id, text = 'I need a webhook tool that retries failed deliveries without sending duplicate events.') => ({ objectID: String(id), author: `requester${id}`, story_title: 'Reliable webhook automation', comment_text: text, story_id: '42', created_at: new Date(Date.now() - 86400000).toISOString() });
 const response = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', ...headers } });
@@ -137,4 +137,35 @@ test('cancellation from final progress cannot return a seed result', async () =>
     fetch: async () => response({ hits: [hit(800)], nbPages: 1 }),
   }), /Cancelled before result/);
   assert.equal(previous.records.length, 0);
+});
+
+
+test('quoted asks and quoted +1 replies never become the current author request', () => {
+  const html = '<blockquote>I need a ChatGPT app to search old conversations.<blockquote>Another quoted need.</blockquote>More quoted context.</blockquote><p>+1</p>';
+  const record = hnRecord(hit(888, html));
+  assert.ok(!record || !record.text.includes('I need a ChatGPT'));
+  assert.equal(authoredPlainText('&amp;gt; I need an app to search PDF files.\n+1').includes('I need'), false);
+  const own = authoredPlainText('<blockquote>I need calendar software.</blockquote><p>I need an API to synchronize free/busy availability.</p>');
+  assert.ok(own.includes('I need an API')); assert.equal(own.includes('calendar software'), false);
+});
+
+test('public collector records every attempt and resumes 429 only after its backoff', async () => {
+  let now = 1000, calls = 0;
+  const client = createPublicCollectorClient({ now: () => now, sleep: async delay => { now += delay; }, intervals: { hn: 0, reddit: 1000 }, resumeAfterBackoff: true,
+    fetch: async () => { calls++; return calls <= 2 ? response({}, 429, { 'retry-after': '2' }) : new Response('<feed/>', { status: 200 }); },
+  });
+  await assert.rejects(client.request('reddit', 'https://www.reddit.com/search.rss?q=software', 'xml'), /HTTP 429/);
+  assert.equal(calls, 2); assert.ok(client.disabled('reddit'));
+  now += 2000; assert.equal(client.disabled('reddit'), undefined);
+  assert.deepEqual(await client.request('reddit', 'https://www.reddit.com/search.rss?q=software', 'xml'), []);
+  assert.equal(client.attempts.length, 3); assert.equal(client.attempts[0].status, 429);
+  assert.equal(client.attempts[0].retryAfterMs, 2000); assert.equal(client.attempts[2].ok, true);
+  assert.equal(client.attempts[2].rawCount, 0, 'successful empty feeds are not errors');
+});
+
+test('title-only Ask HN requests retain their authors without inheriting a title into empty comments', () => {
+  const title = 'Ask HN: Is there a tool to search all my local PDF files?';
+  const post = hnRecord({ objectID: '991', author: 'pdf-user', title, story_text: '', _tags: ['story', 'ask_hn'], created_at: hit(1).created_at });
+  assert.equal(post.recordType, 'post'); assert.equal(post.textScope, 'title-only'); assert.equal(post.text, title);
+  assert.equal(hnRecord({ objectID: '992', author: 'commenter', story_title: title, comment_text: null, story_id: '991', _tags: ['comment'], created_at: hit(1).created_at }), null);
 });

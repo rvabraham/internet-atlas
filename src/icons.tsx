@@ -1,5 +1,5 @@
 import { HugeiconsIcon, type HugeiconsProps } from '@hugeicons/react';
-import { RedditIcon, Linkedin02Icon, NewTwitterIcon, Database02Icon, ArrowDown02Icon, ArrowRight02Icon, ArrowUp02Icon, ArrowDown01Icon, ArrowRight01Icon, Tick02Icon, HelpCircleIcon, Copy01Icon, Download04Icon, LinkSquare02Icon, FocusPointIcon, GitBranchIcon, Globe02Icon, Layers01Icon, Loading03Icon, Maximize01Icon, Message01Icon, Remove01Icon, SidebarRight01Icon, PinIcon, Add01Icon, RefreshIcon, Search01Icon, Settings02Icon, SentIcon, StopIcon, UserGroupIcon, Cancel01Icon } from '@hugeicons/core-free-icons';
+import { Bookmark01Icon, Activity01Icon, RedditIcon, Linkedin02Icon, NewTwitterIcon, Database02Icon, ArrowDown02Icon, ArrowRight02Icon, ArrowUp02Icon, ArrowDown01Icon, ArrowRight01Icon, Tick02Icon, HelpCircleIcon, Copy01Icon, Download04Icon, LinkSquare02Icon, FocusPointIcon, GitBranchIcon, Globe02Icon, Layers01Icon, Loading03Icon, Maximize01Icon, Message01Icon, Remove01Icon, SidebarRight01Icon, PinIcon, Add01Icon, RefreshIcon, Search01Icon, Settings02Icon, SentIcon, StopIcon, UserGroupIcon, Cancel01Icon } from '@hugeicons/core-free-icons';
 
 type IconProps = Omit<HugeiconsProps, 'icon'>;
 const icon = (data: NonNullable<HugeiconsProps['icon']>) => function Icon(props: IconProps) { return <HugeiconsIcon icon={data} size={16} strokeWidth={1.5} aria-hidden="true" {...props}/>; };
@@ -12,3 +12,4 @@ export const PanelRightClose = icon(SidebarRight01Icon), Pin = icon(PinIcon), Pl
 export const Search = icon(Search01Icon), SlidersHorizontal = icon(Settings02Icon), Send = icon(SentIcon), Square = icon(StopIcon), Users = icon(UserGroupIcon), X = icon(Cancel01Icon);
 
 export const Reddit = icon(RedditIcon), Linkedin = icon(Linkedin02Icon), Twitter = icon(NewTwitterIcon), Database = icon(Database02Icon);
+export const Bookmark = icon(Bookmark01Icon), Activity = icon(Activity01Icon);

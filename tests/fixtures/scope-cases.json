@@ -1,0 +1,138 @@
+[
+  {
+    "name": "physical-shopping",
+    "expectedRequest": false,
+    "reason": "The author is shopping for physical Sephora Advent calendar gift sets. Calendar is not a software scheduling workflow here.",
+    "record": {
+      "id": "x:2111930863311016286",
+      "source": "x",
+      "title": "I am looking at Advent Calendar options and really beyond buying the Sephora one because I always do (it’s all",
+      "text": "I am looking at Advent Calendar options and really beyond buying the Sephora one because I always do (it’s all mid market hits I like already and I want them in minis) it’s hard to find novel new sets and brands",
+      "author": "AlmostMedia",
+      "authorId": "x:18842214",
+      "url": "https://x.com/AlmostMedia/status/2111930863311016286",
+      "date": "2026-10-18T14:22:10.000Z",
+      "status": "public",
+      "recordType": "comment"
+    }
+  },
+  {
+    "name": "physical-shopping",
+    "expectedRequest": false,
+    "reason": "The author asks for reasonably priced yogurt and food testing. No software feature or tool is requested.",
+    "record": {
+      "id": "x:2096335954986291683",
+      "source": "x",
+      "title": "@BionicZionist @RobSchneider @Chobani hoping to crowdfund testing FAGE next, we need a confirmed good yogurt t",
+      "text": "@BionicZionist @RobSchneider @Chobani hoping to crowdfund testing FAGE next, we need a confirmed good yogurt that’s reasonably priced and available nationally",
+      "author": "nicefryroll",
+      "authorId": "x:15227832",
+      "url": "https://x.com/nicefryroll/status/2096335954986291683",
+      "date": "2026-09-05T13:33:34.000Z",
+      "status": "public",
+      "recordType": "post"
+    }
+  },
+  {
+    "name": "social-not-product",
+    "expectedRequest": false,
+    "reason": "The author wants spiritual, emotional software engineer friends. Software describes the friends, not a product capability.",
+    "record": {
+      "id": "x:2106553956818190418",
+      "source": "x",
+      "title": "i need more spiritual, emotional cracked software engineer friends 😌",
+      "text": "i need more spiritual, emotional cracked software engineer friends 😌",
+      "author": "ayahohner",
+      "authorId": "x:509136575",
+      "url": "https://x.com/ayahohner/status/2106553956818190418",
+      "date": "2026-10-03T18:16:15.000Z",
+      "status": "public",
+      "recordType": "post"
+    }
+  },
+  {
+    "name": "access-only",
+    "expectedRequest": false,
+    "reason": "The entire ask is for an invite code, with no unmet product workflow.",
+    "record": {
+      "id": "x:2110491724019834985",
+      "source": "x",
+      "title": "@tonychang430 Please I want an invite code",
+      "text": "@tonychang430 Please I want an invite code",
+      "author": "Coobyk_",
+      "authorId": "x:1847754073551851520",
+      "url": "https://x.com/Coobyk_/status/2110491724019834985",
+      "date": "2026-10-14T15:03:32.000Z",
+      "status": "public",
+      "recordType": "post"
+    }
+  },
+  {
+    "name": "ordinary-context-request",
+    "expectedRequest": false,
+    "reason": "The author wants context about an Israeli politician video and foot slapping. Context is not an LLM context feature in this post.",
+    "record": {
+      "id": "x:2095184927213974012",
+      "source": "x",
+      "title": "dude, this is like MEMRI but an israeli politician, and its somewhere between charming and repulsive and also ",
+      "text": "dude, this is like MEMRI but an israeli politician, and its somewhere between charming and repulsive and also wth is foot slapping? CONTEXT! I WANT CONTEXT!",
+      "author": "Shadow_Rebbe",
+      "authorId": "x:1485978825787858946",
+      "url": "https://x.com/Shadow_Rebbe/status/2095184927213974012",
+      "date": "2026-09-02T09:19:47.000Z",
+      "status": "public",
+      "recordType": "post"
+    }
+  },
+  {
+    "name": "entertainment-not-software",
+    "expectedRequest": false,
+    "reason": "A Hermes Agent TV show is requested. Agent is the subject of entertainment, not a software workflow.",
+    "record": {
+      "id": "x:2094041332930994430",
+      "source": "x",
+      "title": "@Sahil_Saghir @123mikeyd @vSouthvPawv we need a Hermes Agent TV show",
+      "text": "@Sahil_Saghir @123mikeyd @vSouthvPawv we need a Hermes Agent TV show",
+      "author": "witcheer",
+      "authorId": "x:1452919031846117384",
+      "url": "https://x.com/witcheer/status/2094041332930994430",
+      "date": "2026-08-30T05:35:33.000Z",
+      "status": "public",
+      "recordType": "post"
+    }
+  },
+  {
+    "name": "missing-referent",
+    "expectedRequest": false,
+    "reason": "The requested database is only called this stuff. Its contents are absent, so a concrete problem or lead match cannot be inferred.",
+    "record": {
+      "id": "x:2104201336472351002",
+      "source": "x",
+      "title": "@TelepathicPug is there a single database of this stuff collected anywhere",
+      "text": "@TelepathicPug is there a single database of this stuff collected anywhere",
+      "author": "xlr8harder",
+      "authorId": "x:1684958423043944449",
+      "url": "https://x.com/xlr8harder/status/2104201336472351002",
+      "date": "2026-09-27T06:27:47.000Z",
+      "status": "public",
+      "recordType": "post"
+    }
+  },
+  {
+    "name": "valid-own-software-need",
+    "expectedRequest": true,
+    "reason": "The author explicitly wants read-only Notion integration access without building a custom connector. This is a concrete personal unmet software capability.",
+    "record": {
+      "id": "x:2110470250852700467",
+      "source": "x",
+      "title": "@Coobyk_ Yep, for sure! My main concern is the security of it all, I’m still not entirely pleased with it. I w",
+      "text": "@Coobyk_ Yep, for sure! My main concern is the security of it all, I’m still not entirely pleased with it. I wish stuff like the Notion integration with, e.g. Muse or Claude would let me select read-only without making my own connector. 1/2",
+      "author": "jglypt",
+      "authorId": "x:1664592429289205761",
+      "url": "https://x.com/jglypt/status/2110470250852700467",
+      "date": "2026-10-14T13:38:13.000Z",
+      "status": "public",
+      "recordType": "comment"
+    }
+  }
+]

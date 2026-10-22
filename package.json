@@ -12,7 +12,12 @@
     "analyze": "node --env-file-if-exists=.env.local scripts/analyze.mjs",
     "understand": "node --env-file-if-exists=.env.local scripts/understand.mjs",
     "collect": "node --env-file-if-exists=.env.local scripts/collect.mjs",
-    "import": "node --env-file-if-exists=.env.local scripts/import.mjs"
+    "import": "node --env-file-if-exists=.env.local scripts/import.mjs",
+    "expand": "node --env-file-if-exists=.env.local scripts/expand.mjs",
+    "merge": "node scripts/merge.mjs",
+    "datasets": "node --env-file-if-exists=.env.local scripts/datasets.mjs",
+    "eval:scope": "node --env-file-if-exists=.env.local scripts/eval-scope.mjs",
+    "index:nodes": "node --env-file-if-exists=.env.local scripts/index-nodes.mjs"
   },
   "dependencies": {
     "@fontsource/geist-mono": "^5.3.0",

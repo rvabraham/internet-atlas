@@ -3,7 +3,7 @@ import { DataSet } from 'vis-data';
 import { Network, type Options, type Node, type Edge } from 'vis-network';
 import type { AtlasState, GraphHandle, View } from './types';
 
-type Props = { state: AtlasState; view: View; topicId: string | null; sourceFilters: string[]; selected: string | null; query: string; referencedIds: string[]; onSelect: (id: string | null) => void; onReady: () => void };
+type Props = { state: AtlasState; view: View; topicId: string | null; sourceFilters: string[]; selected: string | null; query: string; searchNodeIds: string[] | null; relatedIds: string[]; referencedIds: string[]; onSelect: (id: string | null) => void; onReady: () => void };
 const short = (s: string, n = 32) => s.length > n ? s.slice(0, n - 1) + '…' : s;
 const alpha = (color: string, opacity: string) => color + opacity;
 const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -17,7 +17,7 @@ const normalPair = (random: () => number) => {
   return [radius * Math.cos(angle), radius * Math.sin(angle)];
 };
 
-export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ state, view, topicId, sourceFilters, selected, query, referencedIds, onSelect, onReady }, ref) {
+export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ state, view, topicId, sourceFilters, selected, query, searchNodeIds, relatedIds, referencedIds, onSelect, onReady }, ref) {
   const element = useRef<HTMLDivElement>(null), network = useRef<Network | null>(null);
   const nodeData = useRef(new DataSet<Node>()), edgeData = useRef(new DataSet<Edge>());
   const lastGraph = useRef('');
@@ -25,6 +25,7 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
   const onReadyRef = useRef(onReady); onReadyRef.current = onReady;
   const stateRef = useRef(state); stateRef.current = state;
   const referenceKey = referencedIds.join('|');
+  const searchKey = searchNodeIds?.join('|') || '', relatedKey = relatedIds.join('|');
   const references = useRef(new Set<string>()); references.current = new Set(referencedIds);
   const pulses = useRef(new Map<string, number[]>()), pulseFrame = useRef<number | null>(null);
   const hubIds = useRef<string[]>([]);
@@ -202,6 +203,15 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
     const leadMap = new Map(state.leads.map(l => [l.id, l]));
     const signalMembers = signalMap.get(selected || '')?.sourceIds;
     const neighborhoods = signalMembers ? new Set([selected, ...signalMembers, ...signalMembers.map(id => sourceMap.get(id)?.authorId)]) : selected && nodeData.current.get(selected) ? new Set([selected, ...n.getConnectedNodes(selected) as string[]]) : null;
+    if (neighborhoods) for (const id of relatedIds) {
+      neighborhoods.add(id);
+      const members = signalMap.get(id)?.sourceIds || (sourceMap.has(id) ? [id] : []);
+      for (const member of members) { neighborhoods.add(member); neighborhoods.add(sourceMap.get(member)?.authorId); }
+    }
+    const matched = searchNodeIds ? new Set(searchNodeIds) : null;
+    if (matched) {
+      for (const source of state.corpus.records) if (matched.has(source.id)) { matched.add(source.authorId); matched.add(source.topicId); }
+    }
     const lowerQuery = query.toLowerCase().trim();
     const updates: any[] = nodeData.current.get().map(node => {
       const id = String(node.id), s = sourceMap.get(id), lead = leadMap.get(id), topic = state.corpus.topics.find(t => t.id === id);
@@ -210,13 +220,24 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
       const matchesSource = s ? sourceFilters.includes(s.source) : signalMap.has(id) ? signalMap.get(id)!.sourceIds.some(id => sourceFilters.includes(sourceMap.get(id)?.source || '')) : authorSources.length ? authorSources.some(r => sourceFilters.includes(r.source)) : true;
       const searchTerms = lowerQuery.split(/\s+/).filter(Boolean);
       const signal = signalMap.get(id);
-      const matchesQuery = !lowerQuery || searchTerms.every(term => `${s?.title || ''} ${s?.text || ''} ${lead?.name || ''} ${topic?.name || ''} ${signal?.label || ''} ${signal?.workflow || ''} ${signal?.problem || ''} ${signal?.desiredOutcome || ''}`.toLowerCase().includes(term));
+      const matchesQuery = !lowerQuery || matched?.has(id) || searchTerms.every(term => `${s?.title || ''} ${s?.text || ''} ${lead?.name || ''} ${topic?.name || ''} ${signal?.label || ''} ${signal?.workflow || ''} ${signal?.problem || ''} ${signal?.desiredOutcome || ''}`.toLowerCase().includes(term));
       const cited = references.current.has(id);
-      return { id, hidden: !cited && !signalMembers?.includes(id) && (!matchesTopic || !matchesSource), opacity: cited ? 1 : neighborhoods ? neighborhoods.has(id) ? 1 : .13 : !matchesQuery ? .12 : 1 };
+      return { id, hidden: !cited && (!matchesTopic || !matchesSource), opacity: cited ? 1 : neighborhoods ? neighborhoods.has(id) ? 1 : .13 : !matchesQuery ? .12 : 1 };
     });
     nodeData.current.update(updates);
     if (selected && nodeData.current.get(selected)) n.selectNodes([selected]); else n.unselectAll();
     n.redraw();
-  }, [topicId, sourceFilters, selected, query, state, view, referenceKey]);
+  }, [topicId, sourceFilters, selected, query, state, view, referenceKey, searchKey, relatedKey]);
+  useEffect(() => {
+    const temporary = edgeData.current.getIds().filter(id => String(id).startsWith('related-explore:'));
+    if (temporary.length) edgeData.current.remove(temporary);
+    if (view !== 'discover' || !selected || !nodeData.current.get(selected)) return;
+    edgeData.current.add(relatedIds.filter(id => id !== selected && nodeData.current.get(id)).map(id => ({
+      id: `related-explore:${selected}:${id}`, from: selected, to: id,
+      dashes: [2, 8], color: { color: '#ffffff42', highlight: '#ffffff66' }, width: .9,
+      title: 'Related meaning',
+    })));
+    network.current?.redraw();
+  }, [selected, relatedKey, view, state.corpus]);
   return <div className="graph-canvas" ref={element} aria-label={view === 'discover' ? 'Public evidence graph. Use the topics and evidence list to explore with a keyboard.' : 'Leads graph. Select a requester from the list to inspect their evidence.'} />;
 });

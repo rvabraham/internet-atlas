@@ -1,0 +1,11 @@
+{
+  "verdict": "VERIFIED",
+  "at": "2026-10-22T23:16:09.703Z",
+  "runtime": "http://localhost:3004",
+  "fixture": ".atlas/qa-withheld-cviktq/corpus.json",
+  "canaryAbsentFromActualBrowserPayload": true,
+  "publicRecordRetained": "hn:46742298",
+  "inaccessibleGroupDropped": true,
+  "searchDoesNotReturnCanary": true,
+  "modelCalls": 0
+}

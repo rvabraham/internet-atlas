@@ -1,0 +1,35 @@
+{
+  "version": "source-evidence-reviews-v1",
+  "reviewedAt": "2026-10-22T22:57:32.541Z",
+  "reviews": [
+    {
+      "id": "chat-retrieval-excludes-agent-compaction",
+      "action": "exclude-membership",
+      "sourceId": "hn:49226703",
+      "sourceUrl": "https://news.ycombinator.com/item?id=49226703",
+      "sourceHash": "c6c6e5c19fd26b14af814438ccb1e92f2a14894885b3fa1a441f033cde2ea66c",
+      "problemId": "signal:aeb6e4109cd3845f07",
+      "problemHash": "67c030479733404b3bd1678822cae8159534854ce862b4d7512061431e7f0447",
+      "reason": "The author's full original request is for a compacted coding agent to retain access to earlier context and dispatch a subagent to recover requirements. The actor retrieving information is the agent during continued execution. This is automatic agent context recovery, not a person's search or browsing of existing AI conversation contents. Preserve the genuine request as an independent problem."
+    },
+    {
+      "id": "chat-retrieval-excludes-work-conversation-assistant",
+      "action": "exclude-membership",
+      "sourceId": "reddit:1x2f9o8",
+      "sourceUrl": "https://www.reddit.com/r/selfhosted/comments/1x2f9o8/what_is_a_cheaper_ai_personal_assistant_for_email/",
+      "sourceHash": "8374133aa483db5c5d176dcb6a9b7ee2c1636393031f8bab4bc24f5554dc3154",
+      "problemId": "signal:aeb6e4109cd3845f07",
+      "problemHash": "67c030479733404b3bd1678822cae8159534854ce862b4d7512061431e7f0447",
+      "reason": "The title and full original text ask for an AI assistant for email, calendar and life administration, including promised replies, old work-conversation details and meeting reminders. They never identify the old conversations as AI chats. Assigning this requester to AI-conversation search invents that missing referent. Preserve the genuine work-assistant request as an independent problem."
+    },
+    {
+      "id": "chat-search-repairs-uninformative-x-quote",
+      "action": "replace-quote",
+      "sourceId": "x:2031831740474441968",
+      "sourceUrl": "https://x.com/sonikudzu/status/2031831740474441968",
+      "sourceHash": "bfd93d49cdf9ccb14fcf6a7ed2cf40c7cc77563b9f6dc7adfa9576f1430feebf",
+      "quote": "i could find what i need with a simple keyword search.",
+      "reason": "The extracted passage 'please, give' does not explain the request. The replacement is a contiguous literal sentence from the original post. The surrounding original text explicitly contrasts searching chat titles with searching their contents and describes indexing failures. This changes the evidence excerpt only, with no new classification or demand claim."
+    }
+  ]
+}

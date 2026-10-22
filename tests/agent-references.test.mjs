@@ -4,8 +4,8 @@ import { AtlasAgent, CODEX_MODEL } from '../server/agent.mjs';
 import { citedSourceIds, citedSourceOccurrences } from '../shared/citations.mjs';
 
 const sources = [
-  { id: 'hn:123', url: 'https://news.ycombinator.com/item?id=123' },
-  { id: 'gh:456', url: 'https://github.com/acme/tools/issues/456' },
+  { id: 'hn:123', url: 'https://news.ycombinator.com/item?id=123', author: 'alex', authorId: 'hn:alex', source: 'hn', date: '2026-10-01T12:00:00Z', status: 'public' },
+  { id: 'gh:456', url: 'https://github.com/acme/tools/issues/456', author: 'sam', authorId: 'github:sam', source: 'github', date: '2026-10-01T12:00:00Z', status: 'open' },
 ];
 function fixture() {
   const events = [], state = { threadId: 'chat-thread', messages: [] };
@@ -98,4 +98,23 @@ test('stopping a chat aborts its analysis job and interrupts both model turns', 
   const interrupted = calls.filter(call => call.method === 'turn/interrupt');
   assert.ok(interrupted.some(call => call.params.threadId === store.state.threadId && call.params.turnId === 'outer-turn'));
   assert.ok(interrupted.some(call => call.params.threadId === 'analysis-thread' && call.params.turnId === 'inner-turn'));
+});
+
+test('a timed-out structured job interrupts only its own model turn before archiving', async () => {
+  const { agent } = fixture(), calls = [];
+  agent.connect = async () => {};
+  agent.request = async (method, params) => {
+    calls.push({ method, params });
+    if (method === 'thread/start') return { thread: { id: 'timeout-analysis' } };
+    if (method === 'turn/start') return { turn: { id: 'timed-out-turn' } };
+    return {};
+  };
+  await assert.rejects(agent.completeJSON('Analyze', {}, { timeoutMs: 5 }), /timed out/);
+  assert.equal(agent.jsonJobs.size, 0);
+  const interrupted = calls.findIndex(call => call.method === 'turn/interrupt');
+  const archived = calls.findIndex(call => call.method === 'thread/archive');
+  assert.equal(calls[interrupted].params.threadId, 'timeout-analysis');
+  assert.equal(calls[interrupted].params.turnId, 'timed-out-turn');
+  assert.ok(interrupted < archived);
+  assert.equal(agent.active.id, 'answer', 'the visible research turn is not interrupted');
 });

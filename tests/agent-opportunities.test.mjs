@@ -1,0 +1,35 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { AtlasAgent } from '../server/agent.mjs';
+
+test('business recommendation reads a real cohort, frames every supporting requester and preserves the chosen idea', async () => {
+  const records = Array.from({ length: 12 }, (_, i) => ({ id: `hn:${100 + i}`, source: 'hn', author: `person${i}`, authorId: `hn:person${i}`, title: 'Search a local PDF collection', text: `I am looking for a tool that searches all my local PDF files offline. I manually open document folder ${i} to find a passage.`, date: new Date(Date.now() - 86400000).toISOString(), url: `https://news.ycombinator.com/item?id=${100 + i}`, profileUrl: `https://news.ycombinator.com/user?id=person${i}`, status: 'public', topicId: 'retrieval', recordType: 'post' }));
+  for (const r of records) r.problemAnalysis = { classification: 'request', confidence: .95, requesterRole: 'user', workflow: 'Search local document collections', problem: 'Finding a passage requires opening individual PDF files', desiredOutcome: 'Search all local PDF files offline', evidenceQuote: r.text };
+  records[11].text += ' I would pay $5/month for this if I retained my files.';
+  const signal = { id: 'signal:pdf', reviewed: true, confidence: .95, sourceIds: records.map(r => r.id), workflow: 'Search local document collections', problem: 'Finding a passage requires opening individual PDF files', desiredOutcome: 'Search all local PDF files offline', label: 'Search local PDF collections', audience: 'Document users', audit: { status: 'verified' } };
+  const events = [], state = { idea: { title: 'Existing idea' }, leads: [{ id: 'existing-lead' }], drafts: { existing: 'Keep this' }, messages: [] };
+  const before = JSON.stringify({ idea: state.idea, leads: state.leads, drafts: state.drafts });
+  const store = { state, corpus: { records, signals: [signal] }, source: id => records.find(r => r.id === id), save: async () => {} };
+  const agent = new AtlasAgent(store, (event, payload) => events.push({ event, payload }));
+  agent.active = { id: 'answer', parts: {}, exploratory: true };
+  const args = { problemId: signal.id, title: 'Private document search', description: 'Find passages across local document collections without uploading the files.' };
+  await assert.rejects(agent.executeTool('atlas_recommend_opportunity', args), /Survey the full corpus/);
+  const candidates = await agent.executeTool('atlas_opportunities', { query: '' });
+  assert.equal(candidates[0].requesterCount, 12); assert.ok(!candidates[0].sourceIds, 'survey summaries do not flood the context with every source');
+  assert.equal(candidates[0].evidenceCounts.payment, 1);
+  assert.deepEqual(candidates[0].contextToVerify.payment, [records[11].id]);
+  await assert.rejects(agent.executeTool('atlas_recommend_opportunity', args), /Read at least 10/);
+  const opportunity = await agent.executeTool('atlas_get_opportunity', { problemId: signal.id, cursor: '' });
+  assert.equal(opportunity.evidence.length, 12);
+  await assert.rejects(agent.executeTool('atlas_recommend_opportunity', args), /three original/);
+  for (const r of records.slice(0, 3)) await agent.executeTool('atlas_get_source', { sourceId: r.id });
+  await assert.rejects(agent.executeTool('atlas_recommend_opportunity', args), /Read the full sources containing payment language/);
+  await agent.executeTool('atlas_get_source', { sourceId: records[11].id });
+  await agent.executeTool('atlas_recommend_opportunity', args);
+  agent.active.parts.final = `Build private document search, supported by 12 recent requesters. [Original request](${records[0].url}).`;
+  await agent.finish(null);
+  assert.equal(state.messages[0].sourceIds.length, 12);
+  assert.equal(state.messages[0].opportunity.title, args.title);
+  assert.equal(events.find(e => e.event === 'agent-done').payload.sourceIds.length, 12);
+  assert.equal(JSON.stringify({ idea: state.idea, leads: state.leads, drafts: state.drafts }), before);
+});

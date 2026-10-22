@@ -2,17 +2,27 @@
 const ASK = /\b(?:i\s+(?:really\s+)?(?:wish|need|want)|we\s+(?:really\s+)?(?:need|want)|i(?:'|’)m looking for|i am looking for|looking for (?:a|an|some|the best)|i(?:'|’)d (?:love|like|pay)|i would (?:love|like|pay)|would (?:love|like) (?:to|a|an|the)|wish (?:there|it|we)|is there (?:a|an|any)|does (?:anyone|anybody) know|can (?:anyone|somebody) recommend|any recommendations for|please (?:add|support|implement|allow|provide)|would be (?:great|nice|useful|helpful) (?:if|to))\b/i;
 const PROMOTION = /\b(?:i (?:built|created|launched)|we (?:built|created|launched)|i(?:'|’)?m (?:the |a |solo )?founder|i am (?:the |a |solo )?founder|our (?:product|platform)|try my (?:app|tool)|looking for (?:beta (?:users|testers)|testers|customers|early adopters)|show hn:)\b/i;
 const ADVICE = /looking for (?:advice|feedback|a co-?founder|investors|funding|a job|work|clients|customers|testers|beta users)/i;
-export const SOFTWARE = /\b(?:software|tool|app|api|saas|workflow|automation|automate|agent|llm|plugin|self.host|database|dashboard|integration|webhook|billing|authentication|notion|obsidian|n8n|docker|code|developer|deploy|crm|email|calendar|spreadsheet|test|testing|flaky|ci|permission|permissions|scheduling|context|retry|retries|sync|synchronization|offline|deduplication|idempotency)\b/i;
+export const SOFTWARE = /\b(?:software|tool|app|api|saas|workflow|automation|automate|agent|llm|chatgpt|claude|pdf|full.?text|bookmarks?|read.?later|caldav|outlook|plugin|self.host|database|dashboard|integration|webhook|billing|authentication|notion|obsidian|n8n|docker|code|developer|deploy|crm|email|calendar|spreadsheet|test|testing|flaky|ci|permission|permissions|scheduling|context|retry|retries|sync|synchronization|offline|deduplication|idempotency)\b/i;
+
+const unavailableStatuses = new Set(['deleted', 'closed', 'resolved', 'removed', 'private', 'withdrawn', 'opted-out', 'optedout', 'redacted', 'unavailable']);
+const unavailableFlags = ['deleted', 'removed', 'opted_out', 'optedOut', 'optOut', 'redacted', 'withdrawn', 'private', 'unavailable', 'is_deleted', 'is_removed', 'is_opted_out', 'is_redacted', 'is_withdrawn', 'is_private', 'is_unavailable'];
+const trueFlag = value => value === true || value === 1 || typeof value === 'string' && /^(?:true|1|yes)$/i.test(value.trim());
+export const attributableSource = record => {
+  const author = String(record.author || '').trim(), status = String(record.status || '').toLowerCase().replace(/[_ ]/g, '-');
+  return !trueFlag(record.synthetic) && !trueFlag(record.is_synthetic) && !unavailableStatuses.has(status) && !unavailableFlags.some(key => trueFlag(record[key]))
+    && !['', 'unknown', 'anonymous', '[deleted]', '[removed]', 'deleted'].includes(author.toLowerCase())
+    && !/\[deleted\]|^AutoModerator$|\[bot\]/i.test(author)
+    && !(record.source === 'github' && author.toLowerCase() === 'ghost');
+};
 
 export function detectRequest(record) {
-  if (record.source === 'github' && String(record.author).toLowerCase() === 'ghost') return null;
+  if (!attributableSource(record)) return null;
   const title = String(record.title || '');
   let text = String(record.text || '');
   // Issue checklists describe the template, not the requested behavior.
   const section = /#{2,3}\s+(?:Feature Description|Description|Problem(?: statement)?|Motivation|Use case)\s*[:\n]?\s*/i.exec(text);
   if (record.source === 'github' && record.recordType !== 'comment' && section) text = text.slice(section.index + section[0].length);
   const content = `${title}\n${text}`;
-  if (record.synthetic || ['deleted', 'closed', 'removed'].includes(record.status) || /\[deleted\]|AutoModerator|\[bot\]/i.test(record.author || '')) return null;
   if (record.recordType !== 'comment' && /^show hn\s*:/i.test(title)) return null;
   if (record.recordType === 'comment' && /^\s*(?:\+1|same here|me too|following|any updates|bump)[\s!.?]*$/i.test(text)) return { type: 'endorsement', quote: text.trim(), method: 'explicit-comment' };
   if (/who (?:is hiring|wants to be hired)|seeking (?:work|freelancer)|freelancer.*seeking|hiring thread|\b(?:resume|résumé|job search)\b/i.test(title)) return null;
@@ -40,11 +50,13 @@ export function priorityTier(count) {
 }
 
 export function requestFor(record) {
-  if (record.source === 'github' && String(record.author).toLowerCase() === 'ghost') return null;
+  if (!attributableSource(record)) return null;
+  if (record.reviewDecision?.status === 'excluded') return null;
   if (!record.problemAnalysis) return Object.hasOwn(record, 'problemAnalysis') ? null : detectRequest(record);
   const understood = record.problemAnalysis;
   if (understood.classification !== 'request' || understood.confidence < .65 || understood.requesterRole === 'vendor' || ['deleted', 'closed', 'resolved', 'removed'].includes(record.status)) return null;
   const normalize = value => String(value || '').replace(/\s+/g, ' ').trim();
+  if (String(understood.evidenceQuote).includes('[Quoted passage omitted]')) return null;
   if (!normalize(`${record.title}\n${record.text}`).includes(normalize(understood.evidenceQuote))) return null;
   return { type: 'product_request', quote: understood.evidenceQuote, method: 'problem-understanding', problem: understood.problem, workflow: understood.workflow, desiredOutcome: understood.desiredOutcome };
 }

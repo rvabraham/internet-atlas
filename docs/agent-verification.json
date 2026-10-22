@@ -1,74 +1,227 @@
 {
-  "prompt": "What should I build?",
+  "verdict": "VERIFIED",
+  "checkedAt": "2026-10-22T23:10:37.824Z",
   "model": "gpt-6-luna",
+  "authentication": "existing ChatGPT subscription",
+  "prompt": "What business would you build from this data? Show measurable demand and a path to the first customers.",
+  "selectedNode": null,
+  "attachedEvidence": [],
+  "initialConversationMessages": 0,
+  "final": {
+    "id": "0f572e99-ed9a-469e-91fa-86bbff3f43a5",
+    "role": "assistant",
+    "text": "Build a **local-first search and archive for AI conversations**, aimed first at people who use Claude and other assistants regularly and need to find past answers. Import chat histories into a private, searchable archive and export them to formats such as Obsidian or SQLite.\n\nThe reviewed cohort contains **11 distinct public accounts across 12 threads in the last 365 days** (16 accounts all-time). One requester explicitly said they would pay $5/month if they retained ownership of their data, but that is a single public statement, not validated buying intent. Others describe unreliable built-in search and manual scrolling: [a Claude search complaint](https://www.reddit.com/r/ClaudeAI/comments/1rqqufy/has_anyone_found_a_working_solution_for_searching/), [a request for an Obsidian-like archive](https://news.ycombinator.com/item?id=49568177), and [a cross-assistant sync request](https://www.reddit.com/r/ObsidianMD/comments/1x4aos9/is_obsidian_the_right_tool_for_this/).\n\nFirst customers are reachable among those requesters: offer a working prototype and interview them about imports, search, and data ownership. The gap is not simply “chat search”; partial tools already exist, and one user reports an extension that only searches the open chat and has broken features. **The key uncertainty is whether enough users will pay for a dependable, private archive rather than use free or self-built alternatives.**",
+    "sourceIds": [
+      "reddit:t3_1rqqufy",
+      "hn:49568177",
+      "reddit:1x4aos9",
+      "hn:47828154",
+      "x:2031831740474441968",
+      "reddit:t3_1rn278o",
+      "hn:46966746",
+      "reddit:t3_1qwh9ys",
+      "hn:46715059",
+      "reddit:t3_1prg9il",
+      "hn:46283575"
+    ],
+    "opportunity": {
+      "problemId": "signal:aeb6e4109cd3845f07",
+      "title": "Private search and archive for AI conversations",
+      "description": "A local-first app for frequent AI chat users that imports conversation histories from Claude, ChatGPT, Gemini and coding assistants into an owned searchable archive, with reliable full-text search and export to Obsidian or SQLite.",
+      "sourceIds": [
+        "reddit:1x4aos9",
+        "hn:49568177",
+        "hn:47828154",
+        "x:2031831740474441968",
+        "reddit:t3_1rqqufy",
+        "reddit:t3_1rn278o",
+        "hn:46966746",
+        "reddit:t3_1qwh9ys",
+        "hn:46715059",
+        "reddit:t3_1prg9il",
+        "hn:46283575"
+      ],
+      "requesterCount": 11,
+      "allTimeCount": 16,
+      "windowDays": 365,
+      "historical": false,
+      "status": "ready",
+      "classification": "product-opportunity"
+    },
+    "error": null,
+    "createdAt": "2026-10-22T23:05:17.466Z"
+  },
   "tools": [
-    "atlas_signals",
     "atlas_overview",
-    "atlas_signals",
-    "atlas_signals",
-    "atlas_signals",
-    "atlas_get_signal",
-    "atlas_get_signal",
-    "atlas_get_signal",
+    "atlas_opportunities",
+    "atlas_get_opportunity",
+    "atlas_get_source",
+    "atlas_get_source",
+    "atlas_get_source",
     "atlas_search",
-    "atlas_focus"
+    "atlas_recommend_opportunity"
   ],
-  "references": [
+  "referenceEvents": [
     {
-      "nodeIds": [
-        "signal:8554136d022a8249b2",
-        "reddit:t3_1wthb4o",
-        "reddit:t3_1wti41m"
-      ],
-      "kind": "read"
+      "at": "2026-10-22T23:05:03.298Z",
+      "event": "agent-reference",
+      "payload": {
+        "nodeIds": [
+          "signal:aeb6e4109cd3845f07",
+          "reddit:1x4aos9",
+          "hn:49568177",
+          "hn:47828154",
+          "x:2031831740474441968",
+          "reddit:t3_1rqqufy",
+          "reddit:t3_1rn278o",
+          "hn:46966746",
+          "reddit:t3_1qwh9ys",
+          "hn:46715059",
+          "reddit:t3_1prg9il",
+          "hn:46283575"
+        ],
+        "kind": "read"
+      }
     },
     {
-      "nodeIds": [
-        "signal:e7d02a9677c1e25b2d",
-        "gh:3647122172",
-        "gh:comment:3916303102",
-        "gh:comment:4637374988",
-        "gh:comment:4637421598"
-      ],
-      "kind": "read"
+      "at": "2026-10-22T23:05:04.872Z",
+      "event": "agent-reference",
+      "payload": {
+        "nodeIds": [
+          "hn:49568177"
+        ],
+        "kind": "read"
+      }
     },
     {
-      "nodeIds": [
-        "signal:0faa9488a26109c459",
-        "gh:comment:1012142904",
-        "gh:comment:1385021800",
-        "gh:comment:1466100126",
-        "gh:comment:3569548911",
-        "gh:comment:847270235"
-      ],
-      "kind": "read"
+      "at": "2026-10-22T23:05:04.939Z",
+      "event": "agent-reference",
+      "payload": {
+        "nodeIds": [
+          "reddit:t3_1rqqufy"
+        ],
+        "kind": "read"
+      }
     },
     {
-      "nodeIds": [
-        "gh:3647122172",
-        "gh:comment:3916303102",
-        "gh:comment:4637374988"
-      ],
-      "kind": "focus"
+      "at": "2026-10-22T23:05:05.013Z",
+      "event": "agent-reference",
+      "payload": {
+        "nodeIds": [
+          "reddit:1x4aos9"
+        ],
+        "kind": "read"
+      }
     },
     {
-      "nodeIds": [
-        "gh:3647122172"
-      ],
-      "kind": "citation"
+      "at": "2026-10-22T23:05:10.383Z",
+      "event": "agent-reference",
+      "payload": {
+        "nodeIds": [
+          "signal:aeb6e4109cd3845f07",
+          "reddit:1x4aos9",
+          "hn:49568177",
+          "hn:47828154",
+          "x:2031831740474441968",
+          "reddit:t3_1rqqufy",
+          "reddit:t3_1rn278o",
+          "hn:46966746",
+          "reddit:t3_1qwh9ys",
+          "hn:46715059",
+          "reddit:t3_1prg9il",
+          "hn:46283575"
+        ],
+        "kind": "recommendation"
+      }
+    },
+    {
+      "at": "2026-10-22T23:05:17.408Z",
+      "event": "agent-reference",
+      "payload": {
+        "nodeIds": [
+          "reddit:t3_1rqqufy"
+        ],
+        "kind": "citation"
+      }
+    },
+    {
+      "at": "2026-10-22T23:05:17.409Z",
+      "event": "agent-reference",
+      "payload": {
+        "nodeIds": [
+          "hn:49568177"
+        ],
+        "kind": "citation"
+      }
+    },
+    {
+      "at": "2026-10-22T23:05:17.409Z",
+      "event": "agent-reference",
+      "payload": {
+        "nodeIds": [
+          "reddit:1x4aos9"
+        ],
+        "kind": "citation"
+      }
     }
   ],
-  "final": {
-    "id": "95a01ba0-c556-4ba8-ad80-e85df81f613d",
-    "role": "assistant",
-    "text": "Build a **per-user credential layer for shared MCP servers**: an admin configures one server template, while each user securely supplies their own API key, with secrets injected only into approved headers or URL paths. That targets a concrete multi-user workflow: avoiding shared keys, duplicate server configs, or a custom proxy.\n\nThe strongest evidence is an [open Open WebUI feature request](https://github.com/open-webui/open-webui/issues/19313): its author asks for personal credentials on a globally configured MCP server, and another commenter describes using separate configurations or a proxy for users’ individual Pappers API keys. The group has **2 distinct requesters in the last 365 days**, an **Early** signal, not proof of market size or willingness to pay. I also reviewed requests about real-device Playwright testing and Discord event webhooks; those are narrower, similarly early asks. GitHub requests may be feature requests rather than buying intent.\n\nA useful first test: interview multi-user Open WebUI admins about how they currently handle MCP credentials and whether that workaround is painful enough to replace.",
-    "sourceIds": [
-      "gh:3647122172"
+  "chosenStatePreservedDuringDiscovery": true,
+  "guardCheckEvidence": "guard-baseline.json was compared with state immediately after vague discovery, before Use this idea; result true, recorded in tool transcript.",
+  "initialGuardSha256": "6109fa0feef14924f832d5569030180e394720e821b7ccf8eaf9720f9175d6aa",
+  "workflow": {
+    "title": "Private search and archive for AI conversations",
+    "problemIds": [
+      "signal:aeb6e4109cd3845f07"
     ],
-    "error": null,
-    "createdAt": "2026-10-22T21:40:34.252Z"
+    "leads": 16,
+    "recentLeads": 11,
+    "drafts": {
+      "hn:epistasis:dm": {
+        "leadId": "hn:epistasis",
+        "channel": "dm",
+        "subject": "",
+        "body": "You mentioned wanting Claude chats searchable in an Obsidian-like archive, with the data staying yours. I’m exploring that workflow and would value your take: what do CTK and MyChatArchive still make difficult for you? https://news.ycombinator.com/item?id=49568177",
+        "recipient": "epistasis",
+        "ideaRevision": 2,
+        "updatedAt": "2026-10-22T23:06:25.062Z"
+      },
+      "hn:epistasis:email": {
+        "leadId": "hn:epistasis",
+        "channel": "email",
+        "subject": "Searching and keeping your AI chats",
+        "body": "You wrote that you'd want Claude chats in an Obsidian-like archive while keeping ownership of your data. I’m researching this workflow and wondered: after trying CTK and MyChatArchive, what still feels missing? https://news.ycombinator.com/item?id=49568177",
+        "recipient": "",
+        "ideaRevision": 2,
+        "updatedAt": "2026-10-22T23:06:52.753Z"
+      }
+    },
+    "draftChecks": [
+      {
+        "id": "hn:epistasis:dm",
+        "words": 35,
+        "recipient": "",
+        "noEmDash": true,
+        "questions": 1
+      },
+      {
+        "id": "hn:epistasis:email",
+        "words": 33,
+        "recipient": "",
+        "noEmDash": true,
+        "questions": 1
+      }
+    ]
   },
-  "idea": null,
-  "leads": 0,
-  "drafts": 0
+  "earlierFailure": {
+    "verdict": "NOT VERIFIED",
+    "reason": "First attempt incorrectly said no payment mentions. Full-source literal payment extraction and a required full-source read fixed it.",
+    "final": "Build a **local-first search archive for AI conversations**, aimed at frequent users of Claude, ChatGPT, Gemini, and coding assistants. It would import or sync conversation histories, then make past answers and code searchable across providers. The first paid workflow to test is finding a useful answer without scrolling, repeating the question, or switching between chat apps.\n\nAtlas found **11 distinct public accounts across 12 threads in the last 365 days** asking for this workflow, and 16 accounts across all recorded dates. Examples include users reporting unreliable built-in search ([Reddit](https://www.reddit.com/r/ClaudeAI/comments/1rqqufy/has_anyone_found_a_working_solution_for_searching/)), asking for content search rather than title-only search ([X](https://x.com/sonikudzu/status/2031831740474441968)), and wanting to find information across assistants ([Reddit](https://www.reddit.com/r/ObsidianMD/comments/1x4aos9/is_obsidian_the_right_tool_for_this/)). One requester says they manually scroll when search fails; another is seeking a replacement ([Hacker News](https://news.ycombinator.com/item?id=46715059)).\n\nThe first customer path is direct interviews with these public requesters, then a small import-and-search prototype for the providers they actually use. This is **recurring demand**, not proof of a validated market: Atlas found no payment mentions. The key assumption to test is whether reliable, private cross-provider search is valuable enough to pay for, given existing exports, extensions, and native search."
+  },
+  "artifactPaths": [
+    "business-discovery.png",
+    "business-leads.png",
+    "business-email.png",
+    "semantic-related.png"
+  ],
+  "runtimeScope": "Natural discovery and draft checks used final business logic on port 3003. A subsequent query-cache I/O optimization left embedding model, input text, vectors, ranking and business tools unchanged; final search was checked separately after a fresh launch."
 }

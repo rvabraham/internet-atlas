@@ -5,6 +5,25 @@ import { canonicalSourceUrl } from '../shared/citations.mjs';
 
 const AGENT = 'InternetAtlas/0.2 public research; local single-user prototype';
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+const SOURCE_SOFTWARE = /\b(?:chatgpt|claude|pdf|full.?text|bookmarks?|read.?later|caldav|outlook|wallabag|linkding|readwise)\b/i;
+
+// Quoting another user's request does not make it the current author's request.
+export function authoredPlainText(value = '') {
+  let html = String(value);
+  for (let pass = 0; pass < 2; pass++) html = html.replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>');
+  let depth = 0, start = 0, unquoted = '';
+  for (const match of html.matchAll(/<\/?blockquote\b[^>]*>/gi)) {
+    if (!/^<\//.test(match[0])) {
+      if (depth === 0) unquoted += `${html.slice(start, match.index)}\n[Quoted passage omitted]\n`;
+      depth++;
+    } else if (depth > 0 && --depth === 0) start = match.index + match[0].length;
+  }
+  if (!depth) unquoted += html.slice(start);
+  return unquoted.split(/<p(?:\s[^>]*)?>|<\/p>|<br\s*\/?>|\r?\n/gi).map(part => {
+    const text = plainText(part);
+    return /^\s*>/.test(text) ? '[Quoted passage omitted]' : text;
+  }).filter(Boolean).join('\n\n').trim();
+}
 
 export function topicFor(text) {
   const words = new Set(tokens(text));
@@ -12,12 +31,16 @@ export function topicFor(text) {
   return ranked[0]?.score ? ranked[0].id : 'software';
 }
 export function hnRecord(hit) {
-  const text = plainText(hit.comment_text || hit.story_text || ''), title = plainText(hit.story_title || hit.title || 'Hacker News');
-  if (!hit.author || hit.author === '[deleted]' || text.length < 50 || !SOFTWARE.test(`${title} ${text}`)) return null;
-  return { id: `hn:${hit.objectID}`, source: 'hn', topicId: topicFor(`${title} ${text}`), title, text: text.slice(0, 6000), author: hit.author, authorId: `hn:${hit.author}`, profileUrl: `https://news.ycombinator.com/user?id=${encodeURIComponent(hit.author)}`, url: `https://news.ycombinator.com/item?id=${hit.objectID}`, threadUrl: `https://news.ycombinator.com/item?id=${hit.story_id || hit.objectID}`, date: hit.created_at, fetchedAt: new Date().toISOString(), status: 'public', replies: hit.num_comments || 0, recordType: hit.comment_text ? 'comment' : 'post', origin: 'live-api' };
+  const originalHtml = String(hit.comment_text || hit.story_text || ''), title = plainText(hit.story_title || hit.title || 'Hacker News');
+  const isComment = (hit._tags || []).includes('comment') || hit.comment_text !== undefined && hit.comment_text !== null || hit.story_id && String(hit.story_id) !== String(hit.objectID);
+  let text = authoredPlainText(originalHtml), textScope = 'authored-unquoted';
+  if (!isComment && text.length < 25 && /^ask hn\s*:/i.test(title)) { text = title; textScope = 'title-only'; }
+  if (!/^\d+$/.test(String(hit.objectID)) || !hit.author || hit.author === '[deleted]' || text.length < 25 || !Number.isFinite(Date.parse(hit.created_at)) || !SOFTWARE.test(`${title} ${text}`) && !SOURCE_SOFTWARE.test(`${title} ${text}`)) return null;
+  return { id: `hn:${hit.objectID}`, source: 'hn', topicId: topicFor(`${title} ${text}`), title, text: text.slice(0, 6000), author: hit.author, authorId: `hn:${hit.author}`, profileUrl: `https://news.ycombinator.com/user?id=${encodeURIComponent(hit.author)}`, url: `https://news.ycombinator.com/item?id=${hit.objectID}`, threadUrl: `https://news.ycombinator.com/item?id=${hit.story_id || hit.objectID}`, date: hit.created_at, fetchedAt: new Date().toISOString(), status: 'public', replies: hit.num_comments || 0, recordType: isComment ? 'comment' : 'post', origin: 'live-api', originalHtml: originalHtml.slice(0, 24000), textScope };
 }
+
 export function githubRecord(hit, topicId) {
-  const text = plainText(hit.body || hit.title);
+  const text = authoredPlainText(hit.body || hit.title);
   if (!hit.user?.login || hit.user.type === 'Bot' || text.length < 30) return null;
   return { id: `gh:${hit.id}`, source: 'github', topicId, title: hit.title, text: text.slice(0, 6000), author: hit.user.login, authorId: `github:${hit.user.login}`, profileUrl: hit.user.html_url, url: hit.html_url, threadUrl: hit.html_url, apiUrl: hit.url, date: hit.created_at, updatedAt: hit.updated_at, fetchedAt: new Date().toISOString(), status: hit.state, replies: hit.comments, repository: hit.repository_url?.split('/').slice(-2).join('/'), labels: (hit.labels || []).map(l => l.name), recordType: 'post', origin: 'live-api' };
 }
@@ -33,10 +56,10 @@ export function parseRedditFeed(xml) {
     const url = new URL(link);
     if (!['www.reddit.com', 'reddit.com'].includes(url.hostname)) return [];
     const title = plainText(entry.title), raw = typeof entry.content === 'string' ? entry.content : entry.content?.['#text'] || '';
-    const text = plainText(plainText(raw).replace(/\s+submitted by\s+[\s\S]*$/i, ''));
+    const text = authoredPlainText(String(raw).replace(/\s+submitted by\s+[\s\S]*$/i, ''));
     const date = String(entry.published || entry.updated || '');
-    if (!text || !Number.isFinite(Date.parse(date)) || !SOFTWARE.test(`${title} ${text}`)) return [];
-    return [{ id: `reddit:${entry.id}`, source: 'reddit', topicId: topicFor(`${title} ${text}`), title, text: text.slice(0, 6000), author, authorId: `reddit:${author.toLowerCase()}`, profileUrl: `https://www.reddit.com/user/${encodeURIComponent(author)}/`, url: link, threadUrl: link, date, fetchedAt: new Date().toISOString(), status: 'public', replies: 0, community: String(entry.category?.['@_term'] || parsed.feed.category?.['@_term'] || ''), recordType: 'post', origin: 'public-feed' }];
+    if (!text || /^\[(?:removed|deleted)\]$/i.test(text) || !Number.isFinite(Date.parse(date)) || !SOFTWARE.test(`${title} ${text}`) && !SOURCE_SOFTWARE.test(`${title} ${text}`)) return [];
+    return [{ id: `reddit:${entry.id}`, source: 'reddit', topicId: topicFor(`${title} ${text}`), title, text: text.slice(0, 6000), author, authorId: `reddit:${author.toLowerCase()}`, profileUrl: `https://www.reddit.com/user/${encodeURIComponent(author)}/`, url: link, threadUrl: link, date, fetchedAt: new Date().toISOString(), status: 'public', replies: 0, community: String(entry.category?.['@_term'] || parsed.feed.category?.['@_term'] || ''), recordType: 'post', origin: 'public-feed', originalHtml: String(raw).slice(0, 24000), textScope: 'authored-unquoted' }];
   });
 }
 export async function redditFeed(url) {
@@ -49,8 +72,8 @@ export async function redditFeed(url) {
 }
 export function stackRecord(hit) {
   if (!hit.owner?.user_id || !hit.body || !hit.link) return null;
-  const title = plainText(hit.title), text = plainText(hit.body);
-  return { id: `stackexchange:${hit.question_id}`, source: 'stackexchange', topicId: topicFor(`${title} ${text} ${(hit.tags || []).join(' ')}`), title, text: text.slice(0, 6000), author: plainText(hit.owner.display_name), authorId: `stackexchange:${hit.owner.user_id}`, profileUrl: hit.owner.link || hit.link, url: hit.link, threadUrl: hit.link, apiUrl: `https://api.stackexchange.com/2.3/questions/${hit.question_id}?site=softwarerecs&filter=withbody`, date: new Date(hit.creation_date * 1000).toISOString(), fetchedAt: new Date().toISOString(), status: hit.closed_date ? 'closed' : 'public', replies: hit.answer_count || 0, labels: hit.tags || [], recordType: 'post', origin: 'live-api', license: hit.content_license || 'CC BY-SA', licenseUrl: 'https://stackoverflow.com/help/licensing' };
+  const title = plainText(hit.title), text = authoredPlainText(hit.body);
+  return { id: `stackexchange:${hit.question_id}`, source: 'stackexchange', topicId: topicFor(`${title} ${text} ${(hit.tags || []).join(' ')}`), title, text: text.slice(0, 6000), author: plainText(hit.owner.display_name), authorId: `stackexchange:${hit.owner.user_id}`, profileUrl: hit.owner.link || hit.link, url: hit.link, threadUrl: hit.link, apiUrl: `https://api.stackexchange.com/2.3/questions/${hit.question_id}?site=softwarerecs&filter=withbody`, date: new Date(hit.creation_date * 1000).toISOString(), fetchedAt: new Date().toISOString(), status: hit.closed_date ? 'closed' : 'public', replies: hit.answer_count || 0, labels: hit.tags || [], recordType: 'post', origin: 'live-api', license: hit.content_license || 'CC BY-SA', licenseUrl: 'https://stackoverflow.com/help/licensing', originalHtml: String(hit.body).slice(0, 24000), textScope: 'authored-unquoted' };
 }
 
 // Families describe workflows. Every candidate still needs an authored, explicit ask.
@@ -78,7 +101,7 @@ const PROVIDERS = new Set(['hn', 'reddit', 'stackexchange', 'github']);
 const PROVIDER_HOSTS = { hn: 'hn.algolia.com', reddit: 'www.reddit.com', stackexchange: 'api.stackexchange.com', github: 'api.github.com' };
 const REQUEST_INTENTS = '("looking for" OR "I wish" OR "I need" OR "feature request" OR "is there" OR "alternative")';
 
-function checkCancelled(signal) {
+export function checkCollectionCancelled(signal) {
   if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new DOMException(typeof signal.reason === 'string' ? signal.reason : 'Request collection cancelled', 'AbortError');
 }
 
@@ -90,61 +113,79 @@ function retryDelay(response, now) {
 }
 
 // Provider state can be shared across multiple problem collections in one run.
-function collectorClient(options) {
+export function createPublicCollectorClient(options = {}) {
   const fetcher = options.fetch || fetch, sleep = options.sleep || wait, now = options.now || Date.now;
-  const state = options.rateState || {}, signal = options.signal;
-  const disabled = provider => state[provider]?.disabled;
+  const state = options.rateState || {}, signal = options.signal, attempts = options.attempts || [];
+  const disabled = provider => {
+    const current = state[provider];
+    if (options.resumeAfterBackoff && current?.resumeAt && current.resumeAt <= now()) { delete current.disabled; delete current.resumeAt; }
+    return current?.disabled;
+  };
   async function request(provider, url, format = 'json') {
-    checkCancelled(signal);
+    checkCollectionCancelled(signal);
     const parsed = new URL(url);
     if (!PROVIDERS.has(provider) || parsed.protocol !== 'https:' || parsed.hostname !== PROVIDER_HOSTS[provider]) throw new Error('Unsupported collection endpoint');
     const current = state[provider] ||= { nextAt: 0, requests: 0 };
-    if (current.disabled) throw new Error(current.disabled);
+    if (disabled(provider)) throw new Error(current.disabled);
     if (current.nextAt > now()) {
       const delay = current.nextAt - now();
       if (delay > 60000) throw new Error(`${provider} is in backoff until ${new Date(current.nextAt).toISOString()}`);
-      await sleep(delay);
-      checkCancelled(signal);
+      await sleep(delay); checkCollectionCancelled(signal);
     }
     for (let attempt = 0; attempt < 2; attempt++) {
-      checkCancelled(signal);
+      checkCollectionCancelled(signal);
+      const started = now(), entry = { provider, url, startedAt: new Date(started).toISOString(), retry: attempt, status: null, ok: false };
+      attempts.push(entry);
       const headers = { 'User-Agent': AGENT, Accept: format === 'xml' ? 'application/atom+xml' : 'application/json' };
       if (provider === 'github' && process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
-      const timeout = AbortSignal.timeout(20000);
-      const response = await fetcher(url, { headers, redirect: 'error', signal: signal ? AbortSignal.any([signal, timeout]) : timeout });
-      checkCancelled(signal);
-      current.requests++;
-      // Public GitHub search has a separate, low anonymous search allowance.
-      current.nextAt = now() + (provider === 'github' && parsed.pathname === '/search/issues' ? 6500 : provider === 'reddit' ? 1100 : 200);
-      if (response.status === 401 || response.status === 403) {
-        current.disabled = `${provider}: HTTP ${response.status}; collection stopped for this run`;
-        throw new Error(current.disabled);
-      }
-      if (response.status === 429 || response.status >= 500) {
-        const delay = retryDelay(response, now());
-        current.nextAt = now() + delay;
-        if (!attempt && delay <= 10000) { await sleep(delay); checkCancelled(signal); continue; }
-        if (response.status === 429) current.disabled = `${provider}: HTTP 429; retry after ${new Date(current.nextAt).toISOString()}`;
-        throw new Error(current.disabled || `${provider}: HTTP ${response.status}`);
-      }
-      if (!response.ok) throw new Error(`${provider}: HTTP ${response.status}`);
-      if (provider === 'github' && response.headers.get('x-ratelimit-remaining') === '0') current.disabled = `github: rate limit exhausted; resets ${new Date(Number(response.headers.get('x-ratelimit-reset')) * 1000).toISOString()}`;
-      if (format === 'xml') { const xml = await response.text(); checkCancelled(signal); return parseRedditFeed(xml); }
-      const data = await response.json();
-      checkCancelled(signal);
-      if (data.backoff) current.nextAt = now() + Number(data.backoff) * 1000;
-      if (provider === 'stackexchange' && data.quota_remaining !== undefined && data.quota_remaining < 5) current.disabled = 'stackexchange: daily quota nearly exhausted; collection stopped for this run';
-      if (data.error_id) throw new Error(`${provider}: ${data.error_name || data.error_id}: ${data.error_message || 'API error'}`);
-      return data;
+      const interval = options.intervals?.[provider] ?? (provider === 'github' && parsed.pathname === '/search/issues' ? 6500 : provider === 'reddit' ? 1100 : 200);
+      try {
+        const timeout = AbortSignal.timeout(20000);
+        const response = await fetcher(url, { headers, redirect: 'error', signal: signal ? AbortSignal.any([signal, timeout]) : timeout });
+        checkCollectionCancelled(signal); current.requests++;
+        entry.status = response.status;
+        for (const [header, field] of [['x-ratelimit-remaining', 'rateRemaining'], ['x-ratelimit-reset', 'rateReset']]) if (response.headers.get(header) !== null) entry[field] = response.headers.get(header);
+        current.nextAt = now() + interval;
+        if (response.status === 401 || response.status === 403) {
+          current.disabled = `${provider}: HTTP ${response.status}; collection stopped for this run`;
+          throw new Error(current.disabled);
+        }
+        if (response.status === 429 || response.status >= 500) {
+          const delay = retryDelay(response, now()); entry.retryAfterMs = delay;
+          current.nextAt = Math.max(current.nextAt, now() + delay);
+          if (!attempt && delay <= 10000) {
+            entry.error = `${provider}: HTTP ${response.status}`;
+            await sleep(Math.max(delay, interval)); checkCollectionCancelled(signal); continue;
+          }
+          if (response.status === 429) { current.resumeAt = current.nextAt; current.disabled = `${provider}: HTTP 429; retry after ${new Date(current.nextAt).toISOString()}`; }
+          throw new Error(current.disabled || `${provider}: HTTP ${response.status}`);
+        }
+        if (!response.ok) throw new Error(`${provider}: HTTP ${response.status}`);
+        if (provider === 'github' && response.headers.get('x-ratelimit-remaining') === '0') current.disabled = `github: rate limit exhausted; resets ${new Date(Number(response.headers.get('x-ratelimit-reset')) * 1000).toISOString()}`;
+        if (format === 'xml') {
+          const xml = await response.text(); checkCollectionCancelled(signal);
+          const result = parseRedditFeed(xml); entry.rawCount = (xml.match(/<entry\b/g) || []).length; entry.normalizedCount = result.length; entry.ok = true; return result;
+        }
+        const data = await response.json(); checkCollectionCancelled(signal);
+        if (data.backoff) { entry.backoffMs = Number(data.backoff) * 1000; current.nextAt = Math.max(current.nextAt, now() + entry.backoffMs); }
+        if (data.quota_remaining !== undefined) entry.quotaRemaining = data.quota_remaining;
+        if (provider === 'stackexchange' && data.quota_remaining !== undefined && data.quota_remaining < 5) current.disabled = 'stackexchange: daily quota nearly exhausted; collection stopped for this run';
+        if (data.error_id) throw new Error(`${provider}: ${data.error_name || data.error_id}: ${data.error_message || 'API error'}`);
+        entry.rawCount = (data.hits || data.items || (Array.isArray(data) ? data : [])).length;
+        if (data.nbHits !== undefined) entry.totalHits = data.nbHits;
+        entry.ok = true; return data;
+      } catch (error) {
+        entry.error = error.message || String(error); checkCollectionCancelled(signal); throw error;
+      } finally { entry.completedAt = new Date(now()).toISOString(); entry.durationMs = Math.max(0, now() - started); }
     }
   }
-  return { request, disabled };
+  return { request, disabled, attempts, state };
 }
 
 export async function collectProblemRequests(query, previous = { records: [] }, onProgress = () => {}, options = {}) {
   const signal = options.signal;
-  checkCancelled(signal);
-  const plan = problemQueryPlan(query, options), client = collectorClient(options);
+  checkCollectionCancelled(signal);
+  const plan = problemQueryPlan(query, options), client = createPublicCollectorClient(options);
   const providers = new Set(options.providers || ['hn', 'reddit', 'stackexchange', 'github']);
   for (const provider of providers) if (!PROVIDERS.has(provider)) throw new Error(`Unknown provider: ${provider}`);
   const startedAt = new Date().toISOString(), cutoff = Math.floor(Date.now() / 1000) - Math.max(30, Math.min(3650, Number(options.sinceDays) || 365)) * 86400;
@@ -152,13 +193,13 @@ export async function collectProblemRequests(query, previous = { records: [] }, 
   const feeds = [...(previous.feeds || [])], collection = { query: plan.query, family: plan.family, startedAt, examined: 0, accepted: 0, added: 0, duplicates: 0, rejected: 0, sources: {}, errors: [] };
   const report = (source, search, status, count, error, page) => {
     const entry = { source, query: search, problem: plan.query, status, count, error, page, fetchedAt: new Date().toISOString() };
-    checkCancelled(signal);
+    checkCollectionCancelled(signal);
     feeds.push(entry); onProgress({ phase: 'collecting', ...entry });
-    checkCancelled(signal);
+    checkCollectionCancelled(signal);
     if (error) collection.errors.push({ source, query: search, error });
   };
   function accept(found, source, search, page, endpoint) {
-    checkCancelled(signal);
+    checkCollectionCancelled(signal);
     let accepted = 0;
     for (const record of found) {
       if (!record) continue;
@@ -190,7 +231,7 @@ export async function collectProblemRequests(query, previous = { records: [] }, 
         const count = accept(hits.map(hnRecord).filter(Boolean), 'hn', search, page + 1, url);
         report('hn', search, 'ok', count, undefined, page + 1);
         if (hits.length < 100 || page + 1 >= Number(data.nbPages || Infinity)) break;
-      } catch (error) { checkCancelled(signal); report('hn', search, 'error', 0, error.message, page + 1); break; }
+      } catch (error) { checkCollectionCancelled(signal); report('hn', search, 'error', 0, error.message, page + 1); break; }
     }
   }
   if (providers.has('reddit')) {
@@ -199,7 +240,7 @@ export async function collectProblemRequests(query, previous = { records: [] }, 
       if (client.disabled('reddit')) break;
       const url = `https://www.reddit.com/${scope ? `r/${scope}/` : ''}search.rss?q=${encodeURIComponent(search)}&${scope ? 'restrict_sr=on&' : ''}sort=relevance&t=year&limit=100`;
       try { const found = await client.request('reddit', url, 'xml'); report('reddit', scope ? `r/${scope}: ${search}` : search, 'ok', accept(found, 'reddit', search, 1, url), undefined, 1); }
-      catch (error) { checkCancelled(signal); report('reddit', search, 'error', 0, error.message, 1); }
+      catch (error) { checkCollectionCancelled(signal); report('reddit', search, 'error', 0, error.message, 1); }
     }
   }
   if (providers.has('stackexchange')) for (const search of plan.terms.slice(0, 2)) {
@@ -210,7 +251,7 @@ export async function collectProblemRequests(query, previous = { records: [] }, 
         const data = await client.request('stackexchange', url), hits = data.items || [];
         report('stackexchange', search, 'ok', accept(hits.map(stackRecord).filter(Boolean), 'stackexchange', search, page, url), undefined, page);
         if (!data.has_more || client.disabled('stackexchange')) break;
-      } catch (error) { checkCancelled(signal); report('stackexchange', search, 'error', 0, error.message, page); break; }
+      } catch (error) { checkCollectionCancelled(signal); report('stackexchange', search, 'error', 0, error.message, page); break; }
     }
   }
   if (providers.has('github') && plan.repos.length && !client.disabled('github')) {
@@ -227,15 +268,15 @@ export async function collectProblemRequests(query, previous = { records: [] }, 
           const comments = await client.request('github', endpoint);
           const found = comments.filter(comment => comment.user && comment.user.type !== 'Bot').map(comment => ({ ...githubRecord({ ...parent, id: `comment:${comment.id}`, body: comment.body, user: comment.user, html_url: comment.html_url, url: comment.url, created_at: comment.created_at, updated_at: comment.updated_at }, plan.topicId), threadUrl: parent.html_url, parentApiUrl: parent.url, recordType: 'comment' })).filter(record => record.id);
           report('github', `Comments: ${parent.title}`, 'ok', accept(found, 'github', search, 1, endpoint), undefined, 1);
-        } catch (error) { checkCancelled(signal); report('github', `Comments: ${parent.title}`, 'error', 0, error.message, 1); }
+        } catch (error) { checkCollectionCancelled(signal); report('github', `Comments: ${parent.title}`, 'error', 0, error.message, 1); }
       }
-    } catch (error) { checkCancelled(signal); report('github', search, 'error', 0, error.message, 1); }
+    } catch (error) { checkCollectionCancelled(signal); report('github', search, 'error', 0, error.message, 1); }
   }
-  checkCancelled(signal);
+  checkCollectionCancelled(signal);
   if (!feeds.slice(previous.feeds?.length || 0).some(feed => feed.status === 'ok')) throw new Error(`No public providers returned data. Existing atlas was kept. ${collection.errors.map(error => error.error).join('; ')}`);
   collection.completedAt = new Date().toISOString();
   onProgress({ phase: 'collected', ...collection });
-  checkCancelled(signal);
+  checkCollectionCancelled(signal);
   return { ...previous, version: 3, records: [...canonical.values()], feeds: feeds.slice(-500), fetchedAt: collection.completedAt, collection, collections: [...(previous.collections || []), collection].slice(-40) };
 }
 

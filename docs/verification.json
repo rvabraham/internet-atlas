@@ -1,19 +1,23 @@
 {
-  "verifiedAt": "2026-10-22T21:41:57.763Z",
+  "verifiedAt": "2026-10-22T23:16:13.193Z",
   "verdict": "VERIFIED",
   "runtime": "http://localhost:3000",
-  "qaRuntime": "http://localhost:3001",
-  "sourceBoundary": "All files under src, server, shared, scripts, data and tests, plus the listed configuration and lockfile. Documentation and local state are outside the runtime input boundary.",
-  "sourceBaseCommit": "7807901bd03b6700253aa70c554045039741bff3",
-  "sourceDigest": "5157675c4919ee14b3b631a47a8eccda7af7c4c93bc3a3b5dc272866b3e9dad8",
+  "qaRuntime": "http://localhost:3003",
+  "sourceBoundary": "All files under src, server, shared, scripts, data and tests, plus listed build configuration and package lockfile. Documentation and local state are outside the runtime source boundary.",
+  "sourceBaseCommit": "49f2de9e58dd094ecb6c318c200672eda9c45c3f",
+  "sourceDigest": "949bbb1655cca6756cad3519eec38963955cc6da1d5c6dde2693adafd10e8410",
   "source": [
     {
       "path": ".env.example",
-      "sha256": "ac7e9cf30d6ce84f547ee170de1d0d51984b8a616dcf51f67fce02e62d3da98f"
+      "sha256": "3afe99007023a9657af62e3f46a93ff1f08a6aaa9bbd9366ca3cd81c4d9bcc6a"
+    },
+    {
+      "path": "data/evidence-reviews.json",
+      "sha256": "ee822ace013eeecadf0faa51342d104eba56f2581b46efa42902f78796adf845"
     },
     {
       "path": "data/seed.json",
-      "sha256": "7da37c327f79586c9216b3e59857afef76a97d6818fec40ae9e9aa9d7bb2a5c4"
+      "sha256": "d246a97cc38e95c0f4f5c4454a974fb13fb35e5f7f98e876e9589f2d585c3f2a"
     },
     {
       "path": "index.html",
@@ -25,7 +29,7 @@
     },
     {
       "path": "package.json",
-      "sha256": "3e25605d98138d8bb746f7d4e289f7658ced435a7fab0ca4b9412a4600523789"
+      "sha256": "bcce80d556862988782cbe191b4c62fab6ffb9ce10ae0b9025bbf16f6fce2953"
     },
     {
       "path": "scripts/analyze.mjs",
@@ -36,24 +40,84 @@
       "sha256": "df4ef7240a06cdb4513851a5ad8d241369c3d589b6adb48c51a93160159fc5f3"
     },
     {
+      "path": "scripts/datasets.mjs",
+      "sha256": "ec14f1f7996fc102af0a38c59ed33ba4f4b09f4f43df97c56670908bb70c9336"
+    },
+    {
+      "path": "scripts/eval-scope.mjs",
+      "sha256": "47e43cff1f7902e8f675148b310b55169fddc51c9233b47342dc3475ecc27ab8"
+    },
+    {
+      "path": "scripts/expand.mjs",
+      "sha256": "de55726c3beb701785efc2525b3ec7c1a1656708f79cb72ada060caecd4040e8"
+    },
+    {
       "path": "scripts/import.mjs",
       "sha256": "5ec0126373bded1a4540386719899cfad141b6763257fca201b0fa157d73c17d"
+    },
+    {
+      "path": "scripts/index-nodes.mjs",
+      "sha256": "a9bacde6b47dde19161f4a96fbf02fdeb982b9aa52a1657d4c303f82066c4c9d"
     },
     {
       "path": "scripts/ingest.mjs",
       "sha256": "92e917494af42981468cd9d1d4f35415148450e8c8391ddc98414d4e87ddc938"
     },
     {
+      "path": "scripts/merge.mjs",
+      "sha256": "af803be0715670254d34289d19dbf5dfee9efe0a1b922e84284a1fab196b6c85"
+    },
+    {
       "path": "scripts/understand.mjs",
-      "sha256": "d21750929332af8c88305c63a0fc7ccb6a39e11b3f5d2bd88168a040dc9a6644"
+      "sha256": "bb9c465b70ee371b52fe061e22c73ed2abb0367a3fa6135df4704ca121123264"
     },
     {
       "path": "server/agent.mjs",
-      "sha256": "e1a61577dbbb714c65ccb095fab63c457f926fde24adf2eddfd48f08f9b9aff7"
+      "sha256": "f22c4cbe859f724f086b3794248589bcec309a27e9d891b5418573fb951f0c68"
+    },
+    {
+      "path": "server/audit.mjs",
+      "sha256": "801ec8ed6bf4ca792ba70dafb86ed23b954f1bc0be50ce186fc830a077a71ece"
+    },
+    {
+      "path": "server/business-instructions.mjs",
+      "sha256": "a843eecee14f5cf96b69e9384171f8649613164ac00d278bf674b46267088d46"
+    },
+    {
+      "path": "server/cache-migration.mjs",
+      "sha256": "07ca6577cd7fa0bf810cbacf772236e3def6c45bb285000c66cfdeaf6277c568"
+    },
+    {
+      "path": "server/compact.mjs",
+      "sha256": "16e97abb7c190426d53dee24e9bf553add4afd0c740376b9487a1eb099c310da"
     },
     {
       "path": "server/data.mjs",
-      "sha256": "bcbf9559660deb2b3cfe5c91adc9b37697e08073698d20b320d15f61bacc6831"
+      "sha256": "7a44f962f1694281e8128192b2afd59fc0444339f5186b44d7a36c768b399464"
+    },
+    {
+      "path": "server/datasets.mjs",
+      "sha256": "4d0734adf31d36f8e4621a3ce1b7fecdc52ee5185c197b9d6360f7bccc9d38ec"
+    },
+    {
+      "path": "server/drafting.mjs",
+      "sha256": "4c166a305fe19f203ea61bfc47deb6721bda5187ac874c6a512ddb300e685b7f"
+    },
+    {
+      "path": "server/evidence-reviews.mjs",
+      "sha256": "e23aa35b85d101eea4f78ada47c6d2f2e49c3ec22110334272ebcb5538bee88d"
+    },
+    {
+      "path": "server/expansion.mjs",
+      "sha256": "de2a503de8066be7325a7817f717abc2b02e0476a68a31b85388af0e13ed2445"
+    },
+    {
+      "path": "server/global-jobs.mjs",
+      "sha256": "3b475026c125a1c8acad8f22390c67cf880169043b706a3a571d715bab2c7be7"
+    },
+    {
+      "path": "server/health.mjs",
+      "sha256": "59fff89be2141cfd5db609c7901cc80c28af06e1cf02462210195c4389d1d03b"
     },
     {
       "path": "server/imports.mjs",
@@ -61,31 +125,59 @@
     },
     {
       "path": "server/index.mjs",
-      "sha256": "0348b21642a27fcec129875e40888a80a255b0ebfdf8056b7a39c807d0dddbaf"
+      "sha256": "7a4d6e0d8b67fda9e7e2db565f8b44266a52b57daa3678f1bfc62e63d9d3198a"
     },
     {
       "path": "server/intelligence.mjs",
-      "sha256": "bfac9768e636a7139aa24571656a86b08ae8fdd14387dad4ec3208aaac016401"
+      "sha256": "f9ddfcdb4744c83247896ad46cb411bff9c5e5da0653fee240bbc9b3c525735f"
+    },
+    {
+      "path": "server/merge.mjs",
+      "sha256": "5280ac4b18eb6a808edebda9dc8edbb7103d7e8bd67da3abddbd9c9daf835a66"
+    },
+    {
+      "path": "server/node-search-api.mjs",
+      "sha256": "f9879289eb01b36482d7d5cc3fa98f8e5ff60970dbb380599a630cfa7d0bd2aa"
+    },
+    {
+      "path": "server/opportunities.mjs",
+      "sha256": "ba056b657734c0272b7c58f344151bb946edb702cc2bbd26cb63900203804a74"
+    },
+    {
+      "path": "server/opportunity-evidence.mjs",
+      "sha256": "4cb514b9628804b10fc770f7e2d93b455203b74d78bf64da66ecdebcc17ed26b"
     },
     {
       "path": "server/problems.mjs",
-      "sha256": "1a01bc75075a283a88b87187ef6c75d683e145f9e33f63269baaed9feeee0299"
+      "sha256": "bff630415ed5cf2c41b4b9b53bdd9eac1bb9a6a4760cc72d22f4183771ea5aeb"
+    },
+    {
+      "path": "server/prompts/unslop.md",
+      "sha256": "9f2e9eb1ad0241176a2d34ec222f75c40116ea496d7ee626942307aaf9251edb"
     },
     {
       "path": "server/requests.mjs",
-      "sha256": "577b8c8b5a18d1bdeddf98e2769cd8c368ca911f216c6374ae5463e7a99ba5c4"
+      "sha256": "8b25d124aa58bf4e9e5e7459c41ef363815dd05bbde50ee85475e39224913aff"
     },
     {
       "path": "server/security.mjs",
       "sha256": "c757093761c8333faba66968b830a718a47d1f7d468190c6782a6b7260131dfd"
     },
     {
+      "path": "server/semantic-search.mjs",
+      "sha256": "17eb02f7913404fb1b6b9ca338bf9e7dd5095614179ffdc38222de6507e338e5"
+    },
+    {
+      "path": "server/shortlists.mjs",
+      "sha256": "4b39a6b1d79c85365bc6184bccf35ac4b0a96566721fdaf50c11004cfb09110e"
+    },
+    {
       "path": "server/signals.mjs",
-      "sha256": "c1c78712171842021a3c153e4e347c4a3c2bbd4d0db36f5c805b52567dea77f3"
+      "sha256": "f3fdeed058919ab1d658d1c10ab006a15c05aa32be9d1119d00c5ab6966fcb5c"
     },
     {
       "path": "server/sources.mjs",
-      "sha256": "65105572e082cb4940cdfbc25023fdaf6aa173edd6d6ff7cafa89fc761583fbf"
+      "sha256": "61fd56f6de81d4a45b62c8ccb08623d3440a4441b7fd20eb8b4fdcdf91a0d64b"
     },
     {
       "path": "shared/citations.d.mts",
@@ -96,12 +188,28 @@
       "sha256": "3496916975bb9ab21dc9a79135976ba9ad46af59170d46254d2d84a2f20f9e8e"
     },
     {
+      "path": "shared/source-visibility.d.mts",
+      "sha256": "6eae7aed06b71fab26d1ace71f5212fc6459d3ae6aea9c45c0849ca7877ed88f"
+    },
+    {
+      "path": "shared/source-visibility.mjs",
+      "sha256": "7e512c2b6fec2dc985238b3bfa9fd86c55c3a1de04ad31f3e3186d205d3fc6eb"
+    },
+    {
+      "path": "shared/state-transport.d.mts",
+      "sha256": "9b8edffea1a2921f02ee43b1e930288873011db7c8bf9109480813cd424d13f3"
+    },
+    {
+      "path": "shared/state-transport.mjs",
+      "sha256": "ff2300d7285edc6bf017c51fb57dd4610678ae59ae9310518541d1f4d7e64c3d"
+    },
+    {
       "path": "src/App.tsx",
-      "sha256": "b19063a63934bb22b7eace99102ce5e9c599500e1a7ebf4263e2dfb1a8714f7a"
+      "sha256": "cc28b24410393857e2cd45616b7907bbdd1d8a7b0715fe205b7954929a7da597"
     },
     {
       "path": "src/Graph.tsx",
-      "sha256": "4b4044895258f636bbbd8d92d896f0f3982e92dec83b2897efef327d5d7e7e5f"
+      "sha256": "55943622465973e4e1b640826f77609c3ea636b21bd62fabbd4e94845be7af35"
     },
     {
       "path": "src/api.ts",
@@ -109,7 +217,7 @@
     },
     {
       "path": "src/icons.tsx",
-      "sha256": "abde2623f0c3fc0b04fc03f4239f2b7f321dd601f5229d8f67d755899598957d"
+      "sha256": "2cf1ae7d6757320c06c429c0872dfa0d63bf00a52d5f81938774d9ae56cfed5a"
     },
     {
       "path": "src/main.tsx",
@@ -117,19 +225,83 @@
     },
     {
       "path": "src/styles.css",
-      "sha256": "81d38504a1249ca5ed0e3817c4f20a75967268c1040ff58261447691fa9f2a8e"
+      "sha256": "9b511d8398a0fd04b3c70d55435981f981ab253b0eb72273a0b9a3842009b5a5"
     },
     {
       "path": "src/types.ts",
-      "sha256": "b13f57772fe882fe15a1ed436cceff84b898a61b11a24952b3b1a7ed73ec0704"
+      "sha256": "20eced697b72e52082155f83f5d6f6ae3d4c51644dac9f24df0450e79ca037a3"
+    },
+    {
+      "path": "tests/agent-opportunities.test.mjs",
+      "sha256": "2a3505b46208e8f268c7c5adba3b6d279c4619329c5d96870a8f3a76ae67261f"
+    },
+    {
+      "path": "tests/agent-opportunity-freshness.test.mjs",
+      "sha256": "7f500440850e0815553f1c3a8b3e07e4e5b467d8843333ec7e89305e6448e2ed"
+    },
+    {
+      "path": "tests/agent-permissions.test.mjs",
+      "sha256": "995bda07d52d32744b46cc1eb6b056fa344c110e45988dbb82295b4394fba133"
     },
     {
       "path": "tests/agent-references.test.mjs",
-      "sha256": "57f1215a8498e72bcc81391bf3b579cecebe991aee02558876281d873bb41067"
+      "sha256": "bc0de06f821e0d04a2c978d5ce39caf403513d428eb2525af0e839b628267599"
+    },
+    {
+      "path": "tests/audit.test.mjs",
+      "sha256": "105de099cab5d46502e634f93ab82dc2e8d5cda8b5b382d63dabbf6bfecffa22"
+    },
+    {
+      "path": "tests/cache-migration.test.mjs",
+      "sha256": "b38b3be7ef1b5b3c56d2c8940fd79e0aa69c4296e73b6f59a2d66dfc090a2808"
     },
     {
       "path": "tests/collection.test.mjs",
-      "sha256": "a0b64a175e9a98f91681a94a7eeb25aa3ec312969b5b9283ac5d69f454d27c5c"
+      "sha256": "c8cb034dff0f91c3f4326c9e35fced5a402ccb294a6deda998d0c4a7143ac331"
+    },
+    {
+      "path": "tests/compact.test.mjs",
+      "sha256": "cb6f3943aea2282ce0d59a8151b4c3683f0359d691dcee735fc6c06f0c44d449"
+    },
+    {
+      "path": "tests/consolidation.test.mjs",
+      "sha256": "d9586660d6fa11d0d59e6462eb9b1a0938ec959f08e4daf16af072329878d19c"
+    },
+    {
+      "path": "tests/datasets.test.mjs",
+      "sha256": "b494044ad1134dec5021da27c3c7733ec5e3cc0eddd3d8246e220a75f6930654"
+    },
+    {
+      "path": "tests/drafting.test.mjs",
+      "sha256": "9d9916a16c8420678bdebdb4f6b9f19e3f18cc4da8f15046cb286d7e616a00d6"
+    },
+    {
+      "path": "tests/evidence-reviews.test.mjs",
+      "sha256": "eec6af4578011fed75f0b9c31296c958768991d9e235cbc2a7bb7cba258a941f"
+    },
+    {
+      "path": "tests/expansion.test.mjs",
+      "sha256": "8321fda7c090d8964bb2a8a9b91d7d956ef25adf9a7b4afa48f789b03e0c8443"
+    },
+    {
+      "path": "tests/final-index.test.mjs",
+      "sha256": "5bf9a8c0e3b300c1ca4387ef7771e648ef56b2457d8818d60ace258eb3b3fb65"
+    },
+    {
+      "path": "tests/fixtures/scope-cases.json",
+      "sha256": "cc0f24dfab01d743e29f2e541206079a2a1301c69ce64ac7811ceee8db4601fc"
+    },
+    {
+      "path": "tests/global-index.test.mjs",
+      "sha256": "4661f2fd7c4e06c986ede8ba6a18c67d6ff107f0fc27361d65aca4a83abb98e0"
+    },
+    {
+      "path": "tests/global-jobs.test.mjs",
+      "sha256": "535595879015dd2d7a89d49feb24117803ade22b611e63634d9f25cf47e33381"
+    },
+    {
+      "path": "tests/health.test.mjs",
+      "sha256": "a378fda467fd62a36ec3d136162a0a91cc1d65449ea6baddb1fea5a503a8bf93"
     },
     {
       "path": "tests/intelligence.test.mjs",
@@ -140,16 +312,48 @@
       "sha256": "05c89e81b0b3265c9c8bc89bba82b708987f710205af9c9d440b83fde6a3bbee"
     },
     {
+      "path": "tests/merge.test.mjs",
+      "sha256": "bc32807f5c0fd695d1c639c703d589f93b3dbef047b8415045895c162f4109e8"
+    },
+    {
+      "path": "tests/node-search-api.test.mjs",
+      "sha256": "6acd209ed7ac7f15040cda18dfc5fa7402bd27b3c93d23ab4845f863bd539510"
+    },
+    {
+      "path": "tests/opportunities.test.mjs",
+      "sha256": "0c2da030683aa0ab189f7ae431d7299fb230556db338ad412c1df6de052475bf"
+    },
+    {
+      "path": "tests/opportunity-evidence.test.mjs",
+      "sha256": "b9f8344e7765461b3b888452f97cb9e9fdad3856821fe3005d6f136cb1fbc8b0"
+    },
+    {
       "path": "tests/problem-index.test.mjs",
-      "sha256": "b4dc4372f39702bfa21a0041bfca1561404a1470b57d48e62c1cbbecc5938ce0"
+      "sha256": "c68f76b8bb8186396728abf3c9f092cb2080c898899ca2b90894dfc684b7147c"
     },
     {
       "path": "tests/problems.test.mjs",
       "sha256": "ec0f0792370ba72c4ced9efcf70e0910ec954d683ec081acca6dca8c41ca880f"
     },
     {
+      "path": "tests/requester-eligibility.test.mjs",
+      "sha256": "464cf2edfc061447deed89ccef74af73505f2631b5fb83add94dad59e8006fae"
+    },
+    {
+      "path": "tests/semantic-search.test.mjs",
+      "sha256": "d3bb72432754e508efb502dfb677a4e93c640e52d0269190684fbdba995a9ba9"
+    },
+    {
+      "path": "tests/shortlists.test.mjs",
+      "sha256": "484fc45c8a5b8cefc075e0e961f82cb2b18537bf373d0773108216b5ef468c43"
+    },
+    {
       "path": "tests/signals.test.mjs",
       "sha256": "e7e1cbe7881f089fc296c975c913cd5e875bbd84e7904c4fc6887e2a5f121dfc"
+    },
+    {
+      "path": "tests/state-transport.test.mjs",
+      "sha256": "5303ad6ce32f330208e146ec07b4b96054dcee59b940cedd581414d7d5085386"
     },
     {
       "path": "tests/workflow.test.mjs",
@@ -164,104 +368,429 @@
       "sha256": "8d55e641c55ffc4d7967ab63b96f99298befd43092e7dcd5d116e04a4d81570b"
     }
   ],
-  "artifacts": [
-    {
-      "path": "index.html",
-      "sha256": "4e1566868861fe14bcc0419ba0a4fca1f66a207efff1c42a439291e73439bd96",
-      "bytes": 584
-    },
-    {
-      "path": "assets/geist-mono-latin-400-normal-B2yvC1Cq.woff",
-      "sha256": "ec7ecd39327c39a2b2792c8b402d094619b6c1e517a74420cde8fd67a71ed083",
-      "bytes": 13044
-    },
-    {
-      "path": "assets/geist-mono-latin-400-normal-DTRLJnHl.woff2",
-      "sha256": "3f98383b122fe015a48536cd4a1cda855a201718923ffe74931a01597107b9b5",
-      "bytes": 9864
-    },
-    {
-      "path": "assets/geist-mono-latin-500-normal-D-GG86Jb.woff",
-      "sha256": "04dde39e58d3539d8a8933f649c556887984c89efe1d1da53c8bb2412da12138",
-      "bytes": 13336
-    },
-    {
-      "path": "assets/geist-mono-latin-500-normal-YINYabwD.woff2",
-      "sha256": "72971bd4908d3984fa1b1426bb363730e4957e16a0f58bfbca76993095715488",
-      "bytes": 10116
-    },
-    {
-      "path": "assets/geist-mono-latin-600-normal-V-KvD_pi.woff2",
-      "sha256": "8b111a81bab818cf5393b81149c69d6a1756f3acc3a846decafef01974d12bd3",
-      "bytes": 10144
-    },
-    {
-      "path": "assets/geist-mono-latin-600-normal-bZn07FKM.woff",
-      "sha256": "0b8148ae59799737964430c2d4f0656e65f8a190185ce7dc2d1094d69bce5202",
-      "bytes": 13328
-    },
-    {
-      "path": "assets/graph-CP_L6tHG.js",
-      "sha256": "3696027c4958710564fbad1d383f40d1d3a362a28c24108c6f6c23ff21384892",
-      "bytes": 537867
-    },
-    {
-      "path": "assets/index-DRYqTrXs.css",
-      "sha256": "e560a0400412caddb01ac4ca76d22de43a080d27c46eca11c4c4492b35538b52",
-      "bytes": 30600
-    },
-    {
-      "path": "assets/index-DuvGDw7X.js",
-      "sha256": "200771462308857a4405046f32dead66e0969d55ce11a5c73dd5bbfde0714062",
-      "bytes": 413081
-    }
-  ],
-  "userState": {
-    "sha256": "fdff0da14e6b64966f9fa9efb94de09405e7592e18aad69f73ac4ba9204dce4d",
-    "messages": 2,
-    "idea": null,
-    "leads": 0,
-    "drafts": 0
-  },
-  "data": {
-    "records": 3430,
-    "method": "problem-understanding-and-review",
-    "model": "gpt-6-luna",
-    "embeddingModel": "Xenova/all-MiniLM-L6-v2",
-    "revision": "751bff37182d3f1213fa05d7196b954e230abad9",
-    "generatedAt": "2026-10-22T21:37:24.488Z",
-    "candidateCount": 1663,
-    "analyzedCount": 1558,
-    "pendingCount": 105,
-    "requestCount": 891,
-    "groupedRequestCount": 889,
-    "distinctAuthors": 722,
-    "signalCount": 872,
-    "thresholds": [
-      10,
-      20,
-      50
-    ],
-    "windowDays": 365,
-    "classification": "quote-validated-model-analysis",
-    "status": "partial",
-    "validationRejects": 1,
-    "errors": [],
-    "fingerprint": "3987f6709fa957b83ddd435c9c79846d19d1f1291d190a7784e3432596ed03d0"
-  },
-  "checks": {
-    "tests": 93,
-    "productionBuild": "passed",
-    "servedArtifactHashes": "matched",
-    "browserErrors": 0,
-    "viewports": [
-      "1280x720",
-      "592x827"
+  "build": {
+    "command": "npm run build",
+    "log": "verification-build.txt",
+    "assets": [
+      {
+        "path": "/assets/geist-mono-latin-400-normal-B2yvC1Cq.woff",
+        "bytes": 13044,
+        "sha256": "ec7ecd39327c39a2b2792c8b402d094619b6c1e517a74420cde8fd67a71ed083"
+      },
+      {
+        "path": "/assets/geist-mono-latin-400-normal-DTRLJnHl.woff2",
+        "bytes": 9864,
+        "sha256": "3f98383b122fe015a48536cd4a1cda855a201718923ffe74931a01597107b9b5"
+      },
+      {
+        "path": "/assets/geist-mono-latin-500-normal-D-GG86Jb.woff",
+        "bytes": 13336,
+        "sha256": "04dde39e58d3539d8a8933f649c556887984c89efe1d1da53c8bb2412da12138"
+      },
+      {
+        "path": "/assets/geist-mono-latin-500-normal-YINYabwD.woff2",
+        "bytes": 10116,
+        "sha256": "72971bd4908d3984fa1b1426bb363730e4957e16a0f58bfbca76993095715488"
+      },
+      {
+        "path": "/assets/geist-mono-latin-600-normal-V-KvD_pi.woff2",
+        "bytes": 10144,
+        "sha256": "8b111a81bab818cf5393b81149c69d6a1756f3acc3a846decafef01974d12bd3"
+      },
+      {
+        "path": "/assets/geist-mono-latin-600-normal-bZn07FKM.woff",
+        "bytes": 13328,
+        "sha256": "0b8148ae59799737964430c2d4f0656e65f8a190185ce7dc2d1094d69bce5202"
+      },
+      {
+        "path": "/assets/graph-CP_L6tHG.js",
+        "bytes": 537867,
+        "sha256": "3696027c4958710564fbad1d383f40d1d3a362a28c24108c6f6c23ff21384892"
+      },
+      {
+        "path": "/assets/index-DBY_lwZa.css",
+        "bytes": 38117,
+        "sha256": "dbe6905782c070520249eb7780ed56b31a502c29f0e63314bb36e053cfaadcce"
+      },
+      {
+        "path": "/assets/index-DWGPdKKQ.js",
+        "bytes": 431020,
+        "sha256": "59c5216b34c8e07305900e6d659592be8c9e8708e512536fd85a41ba5ac7ed7b"
+      },
+      {
+        "path": "/index.html",
+        "bytes": 584,
+        "sha256": "c7bdb109d5ab3b18096b4c2ec7e0960e667663bd81bc0ca09fb2d4f1863ec91e"
+      }
     ]
   },
+  "runtimeBinding": {
+    "method": "Fresh production launch after final runtime edits; served HTML, JS, CSS and fonts match current dist bytes.",
+    "mainPid": 60623,
+    "log": "verification-runtime.txt",
+    "node": "v26.8.1",
+    "environment": "NODE_ENV=production; bound to 127.0.0.1; no environment secrets captured"
+  },
+  "data": {
+    "seedSha256": "d246a97cc38e95c0f4f5c4454a974fb13fb35e5f7f98e876e9589f2d585c3f2a",
+    "records": 14127,
+    "feeds": 488,
+    "requests": 2280,
+    "problems": 2119,
+    "pending": 614,
+    "sourceCounts": {
+      "hn": 7501,
+      "reddit": 1142,
+      "github": 860,
+      "stackexchange": 494,
+      "x": 4130,
+      "linkedin": 0
+    },
+    "analysis": {
+      "status": "partial",
+      "analyzedCount": 11832,
+      "pendingCount": 614,
+      "requestCount": 2280,
+      "problemCount": 2119,
+      "verifiedCurrentGroups10plus": 2
+    },
+    "evidenceReviews": {
+      "version": "source-evidence-reviews-v1",
+      "quotes": {
+        "version": "source-evidence-reviews-v1",
+        "applied": 1,
+        "changed": 1,
+        "stale": 0,
+        "unmatched": 0,
+        "inactive": 0,
+        "invalid": 0
+      },
+      "memberships": {
+        "version": "source-evidence-reviews-v1",
+        "applied": 2,
+        "changed": 2,
+        "stale": 0,
+        "unmatched": 0,
+        "inactive": 0,
+        "invalid": 0
+      }
+    }
+  },
+  "userState": {
+    "byteIdenticalToPreRestart": true,
+    "sha256": "fd023581f3ce44aa140add83d4e4d8db25e210fe7164cbd2ad54a9c4eecfcd7e",
+    "messages": 12,
+    "ideaTitle": "Trace-to-reproducer for agent workflows",
+    "leads": 2,
+    "drafts": 1
+  },
+  "model": {
+    "accountType": null
+  },
+  "automated": {
+    "tests": 248,
+    "failures": 0,
+    "log": "verification-tests.txt",
+    "scope": "Regression and contract tests, not a substitute for observed model/UI behavior."
+  },
+  "semantic": {
+    "model": "Xenova/all-MiniLM-L6-v2",
+    "revision": "751bff37182d3f1213fa05d7196b954e230abad9",
+    "indexed": 16238,
+    "localEngineBenchmark": {
+      "at": "2026-10-22T23:08:24.577Z",
+      "info": {
+        "state": "ready",
+        "nodeCount": 16238,
+        "indexedCount": 16238,
+        "model": "Xenova/all-MiniLM-L6-v2",
+        "revision": "751bff37182d3f1213fa05d7196b954e230abad9"
+      },
+      "cacheUnchanged": true,
+      "results": [
+        {
+          "q": "find something I said in an old AI conversation",
+          "ms": 918,
+          "method": "hybrid",
+          "topIds": [
+            "hn:45541905",
+            "hn:50170059",
+            "reddit:t3_1v7tdsk",
+            "hn:45509606",
+            "hn:49568177",
+            "reddit:1x2f9o8"
+          ]
+        },
+        {
+          "q": "use my coding agent from my phone",
+          "ms": 127,
+          "method": "hybrid",
+          "topIds": [
+            "signal:237b0b6a32a9b09426",
+            "hn:48148076",
+            "hn:46742298",
+            "signal:2127360a56a41e08e5:808c2d",
+            "x:2060781993311297908",
+            "hn:47950676"
+          ]
+        },
+        {
+          "q": "share free calendar times without exposing event names",
+          "ms": 213,
+          "method": "hybrid",
+          "topIds": [
+            "hn:48913426",
+            "signal:13aec15efe94da9da5",
+            "reddit:1wj17wh",
+            "signal:e7e0b2d556f82a29c1:fb83b7",
+            "reddit:1wy7a9r",
+            "gh:3871035912"
+          ]
+        },
+        {
+          "q": "retrieve text inside saved PDF documents",
+          "ms": 175,
+          "method": "hybrid",
+          "topIds": [
+            "hn:49415857",
+            "hn:36388826",
+            "stackexchange:94890",
+            "stackexchange:93770",
+            "signal:80fcb96e85a0baa912",
+            "hn:34517261"
+          ]
+        }
+      ]
+    },
+    "liveApi": [
+      {
+        "query": "use my coding agent from my phone",
+        "ms": 696,
+        "results": [
+          {
+            "id": "signal:237b0b6a32a9b09426",
+            "kind": "problem",
+            "sourceIds": [
+              "hn:48148076",
+              "hn:46517676",
+              "x:2092746510702371134",
+              "hn:47890774",
+              "hn:47533015",
+              "hn:46985818",
+              "hn:46742298",
+              "hn:46493426",
+              "hn:45989018",
+              "hn:47950676",
+              "hn:48405660",
+              "hn:48142400"
+            ],
+            "score": 0.748363
+          },
+          {
+            "id": "hn:48148076",
+            "kind": "source",
+            "sourceIds": [
+              "hn:48148076"
+            ],
+            "score": 0.678459
+          },
+          {
+            "id": "hn:46742298",
+            "kind": "source",
+            "sourceIds": [
+              "hn:46742298"
+            ],
+            "score": 0.634497
+          },
+          {
+            "id": "signal:2127360a56a41e08e5:808c2d",
+            "kind": "problem",
+            "sourceIds": [
+              "x:2060781993311297908"
+            ],
+            "score": 0.631321
+          },
+          {
+            "id": "x:2060781993311297908",
+            "kind": "source",
+            "sourceIds": [
+              "x:2060781993311297908"
+            ],
+            "score": 0.631321
+          },
+          {
+            "id": "hn:47950676",
+            "kind": "source",
+            "sourceIds": [
+              "hn:47950676"
+            ],
+            "score": 0.63
+          }
+        ],
+        "method": "hybrid",
+        "state": "ready",
+        "status": "ready",
+        "indexed": 16238,
+        "total": 16238
+      },
+      {
+        "query": "retrieve old assistant conversations",
+        "ms": 116,
+        "results": [
+          {
+            "id": "reddit:1x2f9o8",
+            "kind": "source",
+            "sourceIds": [
+              "reddit:1x2f9o8"
+            ],
+            "score": 0.63
+          },
+          {
+            "id": "signal:a7a6780e61e82b1949:2a8600",
+            "kind": "problem",
+            "sourceIds": [
+              "reddit:1x2f9o8"
+            ],
+            "score": 0.63
+          },
+          {
+            "id": "signal:7c5c4a1211c474bc45",
+            "kind": "problem",
+            "sourceIds": [
+              "hn:47476898",
+              "hn:46340415",
+              "reddit:t3_1jwcs8x",
+              "hn:47196134",
+              "hn:48478182"
+            ],
+            "score": 0.59094
+          },
+          {
+            "id": "signal:6d2a24dfb5525d8f18",
+            "kind": "problem",
+            "sourceIds": [
+              "x:2010736255705964694"
+            ],
+            "score": 0.521668
+          },
+          {
+            "id": "reddit:t3_1wzczok",
+            "kind": "source",
+            "sourceIds": [
+              "reddit:t3_1wzczok"
+            ],
+            "score": 0.513904
+          },
+          {
+            "id": "signal:687fa3b71bcdf23e54",
+            "kind": "problem",
+            "sourceIds": [
+              "reddit:t3_1wzczok"
+            ],
+            "score": 0.513904
+          }
+        ],
+        "method": "hybrid",
+        "state": "ready",
+        "status": "ready",
+        "indexed": 16238,
+        "total": 16238
+      },
+      {
+        "query": "share free times without exposing calendar names",
+        "ms": 134,
+        "results": [
+          {
+            "id": "reddit:1vy9g6b",
+            "kind": "source",
+            "sourceIds": [
+              "reddit:1vy9g6b"
+            ],
+            "score": 0.404965
+          },
+          {
+            "id": "signal:2a4eb7069e05e1d521:961f8e",
+            "kind": "problem",
+            "sourceIds": [
+              "reddit:1vy9g6b"
+            ],
+            "score": 0.404965
+          },
+          {
+            "id": "reddit:1wk38lh",
+            "kind": "source",
+            "sourceIds": [
+              "reddit:1wk38lh"
+            ],
+            "score": 0.402816
+          },
+          {
+            "id": "hn:47862634",
+            "kind": "source",
+            "sourceIds": [
+              "hn:47862634"
+            ],
+            "score": 0.387383
+          },
+          {
+            "id": "reddit:1wk8rid",
+            "kind": "source",
+            "sourceIds": [
+              "reddit:1wk8rid"
+            ],
+            "score": 0.382641
+          },
+          {
+            "id": "hn:47055139",
+            "kind": "source",
+            "sourceIds": [
+              "hn:47055139"
+            ],
+            "score": 0.380338
+          }
+        ],
+        "method": "hybrid",
+        "state": "ready",
+        "status": "ready",
+        "indexed": 16238,
+        "total": 16238
+      }
+    ],
+    "hnFilter": {
+      "passed": true,
+      "count": 12
+    }
+  },
+  "browser": {
+    "checked": [
+      "Natural vague business prompt without selected nodes or attachments",
+      "Full 11-source cohort white outlines and framing",
+      "Use this idea opens an editable concrete product thesis",
+      "Requester leads graph contains 11 recent and five historical accounts",
+      "Person evidence, concise DM and email with blank unavailable recipient",
+      "Semantic paraphrase search and Related navigation",
+      "Saved problem survives reload",
+      "Source health counts and collection failures",
+      "Main user state preserved",
+      "Final build reload and citation activation",
+      "Withdrawn-source canary absent from actual browser payload and search"
+    ],
+    "consoleErrors": [],
+    "artifacts": [
+      "business-discovery.png",
+      "business-leads.png",
+      "business-email.png",
+      "semantic-related.png",
+      "visibility-verification.json"
+    ],
+    "scope": "Business/model workflow observed before a subsequent query-cache I/O-only optimization. That optimization preserves model/text/vector/ranking inputs and was checked separately in the final runtime. Final browser reloaded current production assets."
+  },
   "limitations": [
-    "Dataset coverage is partial; 105 candidate posts remain outside validated demand.",
-    "Transient pulse timing has event-level tests and live traces; saved still images show final outlines and framing.",
-    "GitHub profile recheck hit403 in isolated draft test; no contact details were inferred."
-  ]
+    "Sampled corpus, not complete internet demand.",
+    "Public accounts may overlap across platforms; requests and payment language are not validated purchases.",
+    "614 pending candidates excluded; no 20+ or 50+ current cohort.",
+    "X is an opt-in public archive, not a live API. LinkedIn is not connected.",
+    "Transient graph pulses have event traces and regressions; still screenshots prove final outlines and framing."
+  ],
+  "paidDataSpendUsd": 0
 }

@@ -70,7 +70,7 @@ export function summarizeSignal(group, records, now = new Date()) {
 }
 
 let extractorPromise;
-export async function embedTexts(texts, directory, onProgress = () => {}) {
+export async function embedTexts(texts, directory, onProgress = () => {}, { persist = true } = {}) {
   await mkdir(directory, { recursive: true });
   if (!extractorPromise) extractorPromise = (async () => {
     const { pipeline, env } = await import('@huggingface/transformers');
@@ -81,7 +81,7 @@ export async function embedTexts(texts, directory, onProgress = () => {}) {
   const extractor = await extractorPromise;
   let cache = {};
   const cachePath = resolve(directory, 'embeddings.json');
-  try { cache = JSON.parse(await readFile(cachePath, 'utf8')); } catch { /* First local indexing. */ }
+  if (persist) try { cache = JSON.parse(await readFile(cachePath, 'utf8')); } catch { /* First local indexing. */ }
   const keys = texts.map(text => digest(`${EMBEDDING_MODEL}:${EMBEDDING_REVISION}:q8:v1:${text}`));
   const missing = [...new Set(keys)].filter(key => !cache[key]);
   const textForKey = new Map(keys.map((key, i) => [key, texts[i]]));
@@ -91,7 +91,9 @@ export async function embedTexts(texts, directory, onProgress = () => {}) {
     const output = tensor.tolist(); batchKeys.forEach((key, i) => { cache[key] = output[i]; });
     onProgress({ phase: 'embedding', completed: Math.min(offset + 16, missing.length), total: missing.length });
   }
-  const temporary = `${cachePath}.tmp`; await writeFile(temporary, JSON.stringify(cache)); await rename(temporary, cachePath);
+  if (persist && missing.length) {
+    const temporary = `${cachePath}.tmp`; await writeFile(temporary, JSON.stringify(cache)); await rename(temporary, cachePath);
+  }
   return keys.map(key => cache[key]);
 }
 
@@ -101,17 +103,25 @@ export async function analyzeCorpus(corpus, directory, onProgress = () => {}, op
   try {
     const cache = await openIntelligenceCache(directory);
     const understood = await understandRequests(corpus, cache, reasoner, onProgress, options);
+    const { quoteReviews, reviewMemberships } = await import('./evidence-reviews.mjs');
+    const reviewedQuotes = quoteReviews(understood.records);
+    understood.records = reviewedQuotes.records;
+    const quotedSources = new Map(understood.records.map(record => [record.id, record]));
+    understood.requests = understood.requests.map(record => quotedSources.get(record.id) || record);
     options.signal?.throwIfAborted();
     const requests = requestRecords(understood.requests).sort((a, b) => a.id.localeCompare(b.id));
     const texts = requests.map(record => { const p = record.problemAnalysis; return `${p.workflow}. ${p.problem}. Desired outcome: ${p.desiredOutcome}`; });
     const vectors = requests.length ? await (options.embed || embedTexts)(texts, directory, onProgress) : [];
     options.signal?.throwIfAborted();
     onProgress({ phase: 'clustering', completed: 0, total: requests.length });
-    const candidates = clusterRequests(requests, vectors, { threshold: .58, minAnchorSimilarity: .45 }).map(group => ({ ...group, id: `candidate:${digest(group.sourceIds.slice().sort().join('|')).slice(0, 16)}` }));
-    const singletons = candidates.filter(group => group.sourceIds.length === 1).map(group => {
-      const p = requests.find(record => record.id === group.sourceIds[0]).problemAnalysis;
-      return { ...group, id: stableProblemId(p), label: p.desiredOutcome.slice(0, 110), audience: p.audience, workflow: p.workflow, problem: p.problem, desiredOutcome: p.desiredOutcome, confidence: p.confidence, reviewed: true, inferred: true, reviewMethod: `${PROBLEM_CONTRACT_VERSION}:single-request` };
-    });
+    // Retrieval is deliberately broader than final membership. Semantic review and
+    // the independent large-group audit decide whether requests actually match.
+    const candidates = clusterRequests(requests, vectors, { threshold: .48, minAnchorSimilarity: .32 }).map(group => ({ ...group, id: `candidate:${digest(group.sourceIds.slice().sort().join('|')).slice(0, 16)}` }));
+    const singleton = sourceId => {
+      const p = requests.find(record => record.id === sourceId).problemAnalysis;
+      return { id: `${stableProblemId(p)}:${digest(sourceId).slice(0, 6)}`, sourceIds: [sourceId], representativeId: sourceId, label: p.desiredOutcome.length > 95 ? `${p.desiredOutcome.slice(0, 92).replace(/\s+\S*$/, '')}…` : p.desiredOutcome, audience: p.audience, workflow: p.workflow, problem: p.problem, desiredOutcome: p.desiredOutcome, confidence: p.confidence, reviewed: true, inferred: true, reviewMethod: `${PROBLEM_CONTRACT_VERSION}:single-request` };
+    };
+    const singletons = candidates.filter(group => group.sourceIds.length === 1).map(group => singleton(group.sourceIds[0]));
     const reviewed = await reviewProblems(candidates.filter(group => group.sourceIds.length > 1), understood.records, cache, reasoner, onProgress, options);
     const recordMap = new Map(understood.records.map(record => [record.id, record]));
     const now = new Date();
@@ -120,11 +130,81 @@ export async function analyzeCorpus(corpus, directory, onProgress = () => {}, op
       const previous = combined.get(group.id);
       combined.set(group.id, previous ? { ...previous, sourceIds: [...new Set([...previous.sourceIds, ...group.sourceIds])] } : group);
     }
-    const signals = [...combined.values()].map(group => ({ ...summarizeSignal(group, recordMap, now), ...group })).filter(signal => signal.allTimeCount > 0).sort((a, b) => b.tier.rank - a.tier.rank || b.requesterCount - a.requesterCount || b.allTimeCount - a.allTimeCount || b.platforms.length - a.platforms.length);
+    // Revisit nearby meanings across the first review's batch boundaries. This
+    // avoids treating equivalent asks as separate markets merely due to ordering.
+    const initialGroups = [...combined.values()];
+    const groupTexts = initialGroups.map(p => `${p.workflow}. ${p.problem}. Desired outcome: ${p.desiredOutcome}`);
+    const groupVectors = groupTexts.length ? await (options.embed || embedTexts)(groupTexts, directory, onProgress) : [];
+    const neighborhoods = problemNeighborhoods(initialGroups, groupVectors);
+    const consolidated = await reviewProblems(neighborhoods, understood.records, cache, reasoner, value => onProgress({ ...value, phase: 'consolidating' }), options);
+    const revisited = new Set(neighborhoods.flatMap(group => group.sourceIds));
+    const preliminary = [...initialGroups.filter(group => !group.sourceIds.some(id => revisited.has(id))), ...consolidated.groups];
+    // A failed or incomplete review must not silently lose validated asks.
+    const assigned = new Set(preliminary.flatMap(group => group.sourceIds));
+    const exclusions = new Map([...reviewed.excluded, ...consolidated.excluded].map(row => [row.sourceId, row]));
+    const excluded = new Set(exclusions.keys());
+    for (const record of requests) if (!assigned.has(record.id) && !excluded.has(record.id)) preliminary.push(singleton(record.id));
+    for (const record of understood.records) {
+      const decision = exclusions.get(record.id);
+      record.reviewDecision = decision ? { status: 'excluded', reason: decision.reason, version: PROBLEM_CONTRACT_VERSION, reviewedAt: now.toISOString() } : null;
+      record.request = requestFor(record);
+    }
+    const eligibleRequests = requestRecords(understood.records);
+    const globalEnabled = options.globalJobs === undefined ? reasoner.compact === true : options.globalJobs === true;
+    let global = { groups: [], errors: [], audits: [] }, globalVersion = null;
+    if (globalEnabled) {
+      const { discoverGlobalJobs, GLOBAL_JOBS_VERSION } = await import('./global-jobs.mjs');
+      globalVersion = GLOBAL_JOBS_VERSION;
+      try {
+        global = await discoverGlobalJobs(eligibleRequests, cache, reasoner, options.embed || embedTexts, onProgress, {
+          ...options, directory, now, requestVectors: new Map(requests.map((record, index) => [record.id, vectors[index]])),
+        });
+      } catch (error) {
+        options.signal?.throwIfAborted();
+        global.errors.push(`Global discovery: ${error.message}`);
+      }
+    }
+    const globalMembers = new Set(global.groups.flatMap(group => group.sourceIds));
+    const globalIdentities = new Set(global.groups.map(group => group.id));
+    const regrouped = preliminary.flatMap(group => {
+      const sourceIds = group.sourceIds.filter(id => !excluded.has(id) && !globalMembers.has(id));
+      // An unmatched local member must not rejoin a global hypothesis that
+      // declined it merely because a prior review used the same canonical ID.
+      if (globalIdentities.has(group.id)) return sourceIds.map(singleton);
+      return sourceIds.length ? [{ ...group, sourceIds }] : [];
+    });
+    // Consolidation can rename a neighborhood to an existing, unrevisited
+    // problem. Merge before auditing so the combined demand is checked together.
+    const uniqueProblems = new Map();
+    for (const group of [...regrouped, ...global.groups]) {
+      const sourceIds = [...new Set(group.sourceIds)].filter(id => !excluded.has(id));
+      if (!sourceIds.length) continue;
+      const previous = uniqueProblems.get(group.id);
+      uniqueProblems.set(group.id, previous ? { ...previous, sourceIds: [...new Set([...previous.sourceIds, ...sourceIds])] } : { ...group, sourceIds });
+    }
+    const { auditGroups } = await import('./audit.mjs');
+    const audited = await auditGroups([...uniqueProblems.values()], understood.records, cache, reasoner, onProgress, { ...options, now, minAccounts: options.minAccounts ?? (reasoner.compact === true ? 2 : 10) });
+    const reviewedMemberships = reviewMemberships([...audited.groups, ...audited.ungroupedIds.filter(id => !excluded.has(id)).map(singleton)], understood.records);
+    const retainedMembers = new Set(reviewedMemberships.groups.flatMap(group => group.sourceIds));
+    const finalGroups = [...reviewedMemberships.groups, ...reviewedMemberships.rejectedIds.filter(id => !excluded.has(id) && !retainedMembers.has(id)).map(singleton)];
+    const signals = finalGroups.map(group => ({ ...group, ...summarizeSignal(group, recordMap, now), label: group.label })).filter(signal => signal.allTimeCount > 0).sort((a, b) => b.tier.rank - a.tier.rank || b.requesterCount - a.requesterCount || b.allTimeCount - a.allTimeCount || b.platforms.length - a.platforms.length);
     const memberships = new Map(signals.flatMap(signal => signal.sourceIds.map(id => [id, signal.id])));
     for (const record of understood.records) record.signalId = memberships.get(record.id) || null;
-    return { ...corpus, records: understood.records, signals, analysis: { method: 'problem-understanding-and-review', model: 'gpt-6-luna', embeddingModel: EMBEDDING_MODEL, revision: EMBEDDING_REVISION, generatedAt: now.toISOString(), candidateCount: understood.candidates, analyzedCount: understood.analyzed, pendingCount: understood.pending, requestCount: requests.length, groupedRequestCount: memberships.size, distinctAuthors: new Set(requests.map(requesterKey)).size, signalCount: signals.length, thresholds: [10, 20, 50], windowDays: 365, classification: 'quote-validated-model-analysis', status: understood.pending || reviewed.errors.length || reviewed.rejected.length ? 'partial' : 'ready', validationRejects: understood.rejected.length + reviewed.rejected.length, errors: [...understood.errors, ...reviewed.errors], fingerprint: digest(understood.records.map(r => `${r.id}:${r.text}`).join('\n')) } };
+    const errors = [...understood.errors, ...reviewed.errors, ...consolidated.errors, ...global.errors, ...audited.errors];
+    const publishedGlobal = signals.filter(group => globalIdentities.has(group.id));
+    const globalStats = { enabled: globalEnabled, version: globalVersion, acceptedGroups: global.groups.length, publishedGroups: publishedGlobal.length, assignedRequests: new Set(publishedGlobal.flatMap(group => group.sourceIds)).size, auditDecisions: global.audits.length, errors: global.errors.length };
+    return { ...corpus, records: understood.records, signals, membershipAudits: [...global.audits, ...audited.audits, ...reviewedMemberships.audits], analysis: { method: 'problem-understanding-and-review', model: 'gpt-6-luna', embeddingModel: EMBEDDING_MODEL, revision: EMBEDDING_REVISION, generatedAt: now.toISOString(), candidateCount: understood.candidates, analyzedCount: understood.analyzed, pendingCount: understood.pending, requestCount: eligibleRequests.length, groupedRequestCount: memberships.size, distinctAuthors: new Set(eligibleRequests.map(requesterKey)).size, signalCount: signals.length, auditedGroups: new Set(signals.filter(group => ['verified', 'partial'].includes(group.audit?.status)).map(group => group.id)).size, globalJobs: globalStats, evidenceReviews: { version: reviewedQuotes.stats.version, quotes: reviewedQuotes.stats, memberships: reviewedMemberships.stats }, thresholds: [10, 20, 50], windowDays: 365, classification: 'quote-validated-model-analysis', status: understood.pending || errors.length || reviewed.rejected.length || consolidated.rejected.length ? 'partial' : 'ready', validationRejects: understood.rejected.length + reviewed.rejected.length + consolidated.rejected.length, errors, fingerprint: digest(understood.records.map(r => `${r.id}:${r.text}`).join('\n')) } };
   } finally { if (!options.reasoner) reasoner.close(); }
+}
+
+export function problemNeighborhoods(groups, vectors) {
+  const byId = new Map(groups.map(group => [group.id, group]));
+  return clusterRequests(groups, vectors, { threshold: .62, minAnchorSimilarity: .48 })
+    .filter(neighborhood => neighborhood.sourceIds.length > 1)
+    .map(neighborhood => {
+      const sourceIds = [...new Set(neighborhood.sourceIds.flatMap(id => byId.get(id).sourceIds))];
+      return { id: `consolidate:${digest(sourceIds.slice().sort().join('|')).slice(0, 16)}`, sourceIds };
+    });
 }
 
 export function searchSignals(corpus, query = '', topicId = '', limit = 16) {

@@ -1,16 +1,18 @@
 import { readFile, writeFile, rename, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { detectRequest, requestFor } from './requests.mjs';
+import { detectRequest, requestFor, attributableSource } from './requests.mjs';
 import { EXTRACTION_SCHEMA, GROUP_REVIEW_SCHEMA, PROBLEM_CONTRACT_VERSION, problemCacheKey, buildExtractionPrompt, validateExtractions, buildGroupReviewPrompt, validateGroupReview } from './problems.mjs';
+import { COMPACT_EXTRACTION_SCHEMA, COMPACT_GROUP_REVIEW_SCHEMA, buildCompactExtractionPrompt, normalizeCompactExtractions, buildCompactGroupReviewPrompt, normalizeCompactGroupReview } from './compact.mjs';
+import { reuseNarrowedNonrequests } from './cache-migration.mjs';
 
 export const REASONING_MODEL = 'gpt-6-luna';
 const identity = { provider: 'codex-subscription', model: REASONING_MODEL, modelRevision: 'gpt-6-luna', promptVersion: PROBLEM_CONTRACT_VERSION };
 const hash = text => createHash('sha256').update(text).digest('hex');
-const unavailable = record => record.synthetic || ['deleted', 'removed', 'closed', 'resolved'].includes(record.status) || !record.authorId || !Number.isFinite(Date.parse(record.date)) || Date.parse(record.date) > Date.now();
+const unavailable = record => !attributableSource(record) || !record.authorId || !Number.isFinite(Date.parse(record.date)) || Date.parse(record.date) > Date.now();
 
 export function analysisCandidates(records) {
-  const candidates = records.filter(record => !unavailable(record) && (detectRequest(record) || record.source === 'stackexchange' || record.source === 'reddit' && /\b(?:looking for|wish|need|recommend|alternative|how (?:do|can) (?:i|we))\b/i.test(`${record.title} ${record.text}`)));
+  const candidates = records.filter(record => !unavailable(record) && (detectRequest(record) || record.collectionCandidate || ['stackexchange', 'reddit', 'x'].includes(record.source)));
   const byPlatform = [...new Set(candidates.map(record => record.source))].map(source => candidates.filter(record => record.source === source).sort((a, b) => Date.parse(b.date) - Date.parse(a.date)));
   return Array.from({ length: Math.max(0, ...byPlatform.map(rows => rows.length)) }, (_, i) => byPlatform.map(rows => rows[i])).flat().filter(Boolean);
 }
@@ -19,7 +21,7 @@ export async function createReasoner(directory) {
   const { AtlasAgent } = await import('./agent.mjs');
   const agent = new AtlasAgent({ directory }, () => {});
   await agent.connect();
-  return { complete: (prompt, schema) => agent.completeJSON(prompt, schema), close: () => agent.close() };
+  return { compact: true, complete: (prompt, schema, options) => agent.completeJSON(prompt, schema, options), close: () => agent.close() };
 }
 
 export async function openIntelligenceCache(directory) {
@@ -37,6 +39,7 @@ export async function openIntelligenceCache(directory) {
 
 export async function understandRequests(corpus, cache, reasoner, progress = () => {}, { maxNewRecords = 2000, batchSize = 20, concurrency = 3, signal } = {}) {
   signal?.throwIfAborted();
+  if (reuseNarrowedNonrequests(corpus.records, cache, REASONING_MODEL)) await cache.save();
   const candidates = analysisCandidates(corpus.records);
   const selected = candidates.filter(record => !cache.data.extractions[problemCacheKey(record, identity)]).slice(0, maxNewRecords);
   let completed = candidates.length - candidates.filter(record => !cache.data.extractions[problemCacheKey(record, identity)]).length;
@@ -49,7 +52,9 @@ export async function understandRequests(corpus, cache, reasoner, progress = () 
       signal?.throwIfAborted();
       const batch = batches[cursor++];
       try {
-        const output = await reasoner.complete(buildExtractionPrompt(batch), EXTRACTION_SCHEMA);
+        const compact = reasoner.compact === true;
+        const raw = await reasoner.complete(compact ? buildCompactExtractionPrompt(batch) : buildExtractionPrompt(batch), compact ? COMPACT_EXTRACTION_SCHEMA : EXTRACTION_SCHEMA);
+        const output = compact ? normalizeCompactExtractions(raw) : raw;
         signal?.throwIfAborted();
         const checked = validateExtractions(output, batch);
         for (const extraction of checked.accepted) {
@@ -67,7 +72,9 @@ export async function understandRequests(corpus, cache, reasoner, progress = () 
   }));
   const records = corpus.records.map(source => {
     const cached = cache.data.extractions[problemCacheKey(source, identity)];
-    const record = { ...source, problemAnalysis: cached || null };
+    // Review decisions belong to one complete indexing run. Re-evaluate them
+    // from the current review output instead of suppressing a new analysis.
+    const record = { ...source, reviewDecision: null, problemAnalysis: cached || null };
     return { ...record, request: requestFor(record), signalId: null };
   });
   const requests = records.filter(record => record.problemAnalysis?.classification === 'request' && record.problemAnalysis.confidence >= .65 && record.request);
@@ -97,7 +104,7 @@ export async function reviewProblems(candidates, records, cache, reasoner, progr
   const batches = [
     ...candidates.filter(candidate => candidate.sourceIds.length > 45).flatMap(candidate => reviewBatches([candidate], 100)),
     ...reviewBatches(candidates.filter(candidate => candidate.sourceIds.length <= 45)),
-  ], groups = [], errors = [], rejected = [];
+  ], groups = [], errors = [], rejected = [], excluded = [];
   let cursor = 0, completed = 0;
   progress({ phase: 'reviewing', completed, total: batches.length });
   await Promise.all(Array.from({ length: Math.min(concurrency, batches.length) }, async () => {
@@ -107,13 +114,16 @@ export async function reviewProblems(candidates, records, cache, reasoner, progr
       const ids = new Set(batch.flatMap(group => group.sourceIds));
       const sources = records.filter(record => ids.has(record.id));
       const extracted = extractions.filter(row => ids.has(row.sourceId));
-      const prompt = buildGroupReviewPrompt(batch, sources, extracted);
+      const compact = reasoner.compact === true;
+      const prompt = compact ? buildCompactGroupReviewPrompt(batch, sources, extracted) : buildGroupReviewPrompt(batch, sources, extracted);
       const key = hash(`${JSON.stringify(identity)}:review:${prompt}`);
       try {
-        const output = cache.data.reviews[key] || await reasoner.complete(prompt, GROUP_REVIEW_SCHEMA);
+        const cached = cache.data.reviews[key];
+        const raw = cached || await reasoner.complete(prompt, compact ? COMPACT_GROUP_REVIEW_SCHEMA : GROUP_REVIEW_SCHEMA);
+        const output = cached ? cached : compact ? normalizeCompactGroupReview(raw, batch, sources, extracted) : raw;
         signal?.throwIfAborted();
         const checked = validateGroupReview(output, batch, sources, extracted);
-        groups.push(...checked.accepted.filter(group => group.confidence >= .65)); rejected.push(...checked.rejected);
+        groups.push(...checked.accepted.filter(group => group.confidence >= .65)); rejected.push(...checked.rejected); excluded.push(...checked.excluded);
         cache.data.reviews[key] = output; await cache.save();
       } catch (error) {
         signal?.throwIfAborted();
@@ -130,5 +140,5 @@ export async function reviewProblems(candidates, records, cache, reasoner, progr
     if (existing) existing.sourceIds = [...new Set([...existing.sourceIds, ...group.sourceIds])];
     else merged.set(group.id, { ...group });
   }
-  return { groups: [...merged.values()], errors, rejected };
+  return { groups: [...merged.values()], errors, rejected, excluded };
 }

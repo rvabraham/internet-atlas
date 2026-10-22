@@ -111,7 +111,7 @@ test('a coarse candidate containing unrelated asks is split by review into separ
     return { groups: rows.map(row => groupFor([candidates[0].id], [row])), excluded: [] };
   });
   const { corpus, calls } = await indexed([webhook, calendar], rows, { reasoner, embed: async texts => texts.map(() => [1, 0]) });
-  assert.equal(calls.filter(call => call.schema === GROUP_REVIEW_SCHEMA).length, 1);
+  assert.equal(calls.filter(call => call.schema === GROUP_REVIEW_SCHEMA).length, 2, 'the cross-batch consolidation also preserves separate needs');
   assert.equal(corpus.signals.length, 2);
   assert.ok(corpus.signals.every(group => group.requesterCount === 1 && group.allTimeCount === 1));
   assert.deepEqual(new Set(corpus.signals.flatMap(group => group.sourceIds)), new Set([webhook.id, calendar.id]));
@@ -137,7 +137,8 @@ test('review cannot invent demand counts and accepted counts come from distinct 
   const rows = [understanding(first), understanding(second)];
   const makeOptions = inventedCount => ({ embed: async texts => texts.map(() => [1, 0]), reasoner: fakeReasoner(rows, candidates => ({ groups: [groupFor([candidates[0].id], rows, inventedCount ? { requesterCount: 50 } : {})], excluded: [] })) });
   const invented = await indexed([first, second], rows, makeOptions(true));
-  assert.equal(invented.corpus.signals.length, 0);
+  assert.equal(invented.corpus.signals.length, 2, 'invalid grouping preserves validated asks as separate singletons');
+  assert.ok(invented.corpus.signals.every(group => group.requesterCount === 1 && group.tier.id === 'early'));
   assert.ok(invented.corpus.analysis.validationRejects > 0);
   const valid = await indexed([first, second], rows, makeOptions(false));
   assert.equal(valid.corpus.signals.length, 1);

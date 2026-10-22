@@ -3,7 +3,9 @@ import { resolve, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { citedSourceIds } from '../shared/citations.mjs';
 import { recountSignals, embedTexts, cosine } from './signals.mjs';
-import { requestFor } from './requests.mjs';
+import { requestFor, attributableSource } from './requests.mjs';
+import { shortlistSourceIds, updateShortlists } from './shortlists.mjs';
+import { browserCorpus } from '../shared/state-transport.mjs';
 
 export const ROOT = resolve(import.meta.dirname, '..');
 export const TOPICS = [
@@ -28,6 +30,8 @@ export function plainText(input = '') {
 export const tokens = text => plainText(text).toLowerCase().match(/[a-z0-9][a-z0-9_+-]{2,}/g) || [];
 const STOP = new Set('the and for that this with from are have has was were you your not but can all would could should they their how what our will into about use using used also just when there more than some like been one any its get does which need want make'.split(' '));
 const keywords = text => [...new Set(tokens(text).filter(t => !STOP.has(t)))];
+const profileText = value => value == null || value === 'null' ? null : plainText(value) || null;
+const publicProfile = profile => ({ ...profile, bio: profileText(profile.bio), company: profileText(profile.company) });
 export function matchesCollection(topic, text) {
   const words = tokens(text);
   return keywords(topic.query).every(term => {
@@ -63,7 +67,7 @@ export function searchRecords(corpus, query, limit = 18, topicId) {
   return result.slice(0, Math.max(1, Math.min(100, limit)));
 }
 
-const unavailableLeadSource = (record, now = Date.now()) => record.synthetic || ['deleted', 'removed', 'closed', 'resolved'].includes(record.status) || typeof record.authorId !== 'string' || !record.authorId || typeof record.author !== 'string' || !record.author || /\[deleted\]|\[bot\]|^AutoModerator$/i.test(record.author) || record.source === 'github' && /^ghost$/i.test(record.author) || !Number.isFinite(Date.parse(record.date)) || Date.parse(record.date) > now;
+const unavailableLeadSource = (record, now = Date.now()) => !attributableSource(record) || typeof record.authorId !== 'string' || !record.authorId || !Number.isFinite(Date.parse(record.date)) || Date.parse(record.date) > now;
 const normalizedQuote = value => String(value || '').replace(/\s+/g, ' ').trim();
 const accountId = record => {
   const id = record.authorId.startsWith(`${record.source}:`) ? record.authorId : `${record.source}:${record.authorId}`;
@@ -159,8 +163,8 @@ export function rankLeads(corpus, idea, limit, { problemMatches = [], now = Date
   return keywordLeads(corpus, { ...idea, sourceIds: idea.sourceIds || [] }, boundedLimit, now, modern);
 }
 
-export function initialState() { return { idea: null, leads: [], leadSearch: null, drafts: {}, profiles: {}, messages: [], threadId: null, pinned: [], selectedModel: null }; }
-const referencedSources = (state, records) => new Set([...state.pinned, ...(state.idea?.sourceIds || []), ...state.leads.flatMap(l => l.sourceIds), ...state.messages.flatMap(m => [...(m.sourceIds || []), ...citedSourceIds(m.text, records)])]);
+export function initialState() { return { idea: null, leads: [], leadSearch: null, shortlists: [], drafts: {}, profiles: {}, messages: [], threadId: null, pinned: [], selectedModel: null }; }
+const referencedSources = (state, records) => new Set([...state.pinned, ...shortlistSourceIds(state.shortlists), ...(state.idea?.sourceIds || []), ...state.leads.flatMap(l => l.sourceIds), ...state.messages.flatMap(m => [...(m.sourceIds || []), ...citedSourceIds(m.text, records)])]);
 export class AtlasStore {
   constructor(directory = resolve(ROOT, '.atlas')) { this.directory = directory; this.state = initialState(); this.corpus = { topics: TOPICS, records: [], status: [] }; this.queue = Promise.resolve(); }
   async load() {
@@ -205,6 +209,12 @@ export class AtlasStore {
     await writeFile(temporary, JSON.stringify(this.corpus, null, 2)); await rename(temporary, path);
   }
   source(id) { return this.corpus.records.find(r => r.id === id); }
+  async saveProblem(input) {
+    this.state.shortlists = updateShortlists(this.state.shortlists, input, this.corpus);
+    // Seed data may change outside a running server. Keep saved evidence on disk too.
+    if (input.saved) await this.persistCorpus();
+    await this.save(); return this.state.shortlists;
+  }
   async setIdea(input) {
     const title = String(input.title || '').trim().slice(0, 160);
     if (!title) throw new Error('Give your idea a name.');
@@ -241,7 +251,7 @@ export class AtlasStore {
     try {
       if (lead.source === 'github') {
         const profile = await publicFetch(`https://api.github.com/users/${encodeURIComponent(lead.name)}`);
-        Object.assign(result, { displayName: profile.name, bio: plainText(profile.bio), company: plainText(profile.company) || null, website: /^https?:\/\//.test(profile.blog) ? profile.blog : null, email: profile.email || null });
+        Object.assign(result, { displayName: profile.name, bio: profileText(profile.bio), company: profileText(profile.company), website: /^https?:\/\//.test(profile.blog) ? profile.blog : null, email: profile.email || null });
       } else if (lead.source === 'hn') {
         const profile = await publicFetch(`https://hacker-news.firebaseio.com/v0/user/${encodeURIComponent(lead.name)}.json`);
         result.bio = plainText(profile?.about || '');
@@ -276,5 +286,5 @@ export class AtlasStore {
     this.state.drafts[`${lead.id}:${draft.channel}`] = draft;
     await this.save(); return draft;
   }
-  publicState() { const { threadId, agentToolVersion, ...state } = this.state; return { ...state, corpus: this.corpus }; }
+  publicState() { const { threadId, agentToolVersion, ...state } = this.state; return { ...state, profiles: Object.fromEntries(Object.entries(state.profiles).map(([id, profile]) => [id, publicProfile(profile)])), corpus: browserCorpus(this.corpus) }; }
 }
