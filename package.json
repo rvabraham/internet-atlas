@@ -8,13 +8,18 @@
     "build": "tsc --noEmit && vite build",
     "start": "NODE_ENV=production node --env-file-if-exists=.env.local server/index.mjs",
     "ingest": "node --env-file-if-exists=.env.local scripts/ingest.mjs",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "analyze": "node --env-file-if-exists=.env.local scripts/analyze.mjs",
+    "import": "node --env-file-if-exists=.env.local scripts/import.mjs"
   },
   "dependencies": {
     "@fontsource/geist-mono": "^5.3.0",
     "@hugeicons/core-free-icons": "^4.3.5",
     "@hugeicons/react": "^1.1.10",
+    "@huggingface/transformers": "^4.3.1",
+    "csv-parse": "^7.0.3",
     "express": "^5.1.0",
+    "fast-xml-parser": "^5.11.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.0.0",

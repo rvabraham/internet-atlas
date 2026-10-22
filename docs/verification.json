@@ -1,0 +1,143 @@
+{
+  "verifiedAt": "2026-10-22T21:00:36.488Z",
+  "runtime": "http://localhost:3000",
+  "sourceBoundary": "All source files in src, server, shared, scripts and data, plus the listed build/configuration inputs. Dependencies resolved by package-lock.json; cached model pinned by revision in seed analysis.",
+  "sourceDigest": "480463d17f12145ee7d786173940efa5a258f33cbd45decd9cd47bfa0f38569d",
+  "source": [
+    {
+      "path": "data/seed.json",
+      "sha256": "72c27cfe170eabbc1e9102dfae2f5c2736326c2d248c231c117993ff12193000"
+    },
+    {
+      "path": "index.html",
+      "sha256": "c2e1144662cd5042c48f8afb1a0178da4e91a2c13bbff4c1f86b39f9eaed254c"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "57fe6d32329e29eff0dafe89fda55b97870b97a16916e642887e8f2fd535284b"
+    },
+    {
+      "path": "package.json",
+      "sha256": "217366380c6b5b84dee78c9300f4a5ff1f1512b154e4fc233ddc15937e8b05b2"
+    },
+    {
+      "path": "scripts/analyze.mjs",
+      "sha256": "54053d738c85688e3a50834dc3892d9330fba8156083d9533be9921ae0d370f7"
+    },
+    {
+      "path": "scripts/import.mjs",
+      "sha256": "5ec0126373bded1a4540386719899cfad141b6763257fca201b0fa157d73c17d"
+    },
+    {
+      "path": "scripts/ingest.mjs",
+      "sha256": "92e917494af42981468cd9d1d4f35415148450e8c8391ddc98414d4e87ddc938"
+    },
+    {
+      "path": "server/agent.mjs",
+      "sha256": "bc75585f4c13a014d935ee48f4e3edca43b7420b9ec74d5a0d5c84aa0b3e29ce"
+    },
+    {
+      "path": "server/data.mjs",
+      "sha256": "d1c5f5ef578fc81679ba9b1886dbeea7654581f76f7758cabce9c2a150377ec0"
+    },
+    {
+      "path": "server/imports.mjs",
+      "sha256": "48fc87e53943d9ec473658630871489e3f52b9d673956688e79610c23d743a9d"
+    },
+    {
+      "path": "server/index.mjs",
+      "sha256": "7173d743d8c2197ebdf62a79f24e8e3bfc4745cb65707ac5d84b0fa031e18252"
+    },
+    {
+      "path": "server/requests.mjs",
+      "sha256": "be35749cd014b75428b9a2013d153406ed93285cd1e3450b5e1c2fc2862f9f8d"
+    },
+    {
+      "path": "server/security.mjs",
+      "sha256": "c757093761c8333faba66968b830a718a47d1f7d468190c6782a6b7260131dfd"
+    },
+    {
+      "path": "server/signals.mjs",
+      "sha256": "1d8f1d63fd5985c808b76b604c15021873336578e812a0d9a2aad4be395b3342"
+    },
+    {
+      "path": "server/sources.mjs",
+      "sha256": "1b05398589e08cec831c0997f75ad3be23c5bfafb7d979ca9692d9a7dd920d75"
+    },
+    {
+      "path": "shared/citations.d.mts",
+      "sha256": "fe5965c893c29547e37f237a6ff7cf97b85791aad6fe88b73b6b76287572a36a"
+    },
+    {
+      "path": "shared/citations.mjs",
+      "sha256": "1d6af72709244f0634a5fcf28543d880bc19eed6b168aa03e779ad27d2d1abc7"
+    },
+    {
+      "path": "src/App.tsx",
+      "sha256": "d545c41d8d1d395dbad247d88e8ca2b3de90e16731d9e2ada44fef68027f8104"
+    },
+    {
+      "path": "src/Graph.tsx",
+      "sha256": "db8f95e94d8fde142be79a8c217b560f36f55e1bfaa8f532084f9dde55c30093"
+    },
+    {
+      "path": "src/api.ts",
+      "sha256": "6182f6370d6f011bc60dca52044b77f04588b9d43aeb9a971a6aa31ad2675a0a"
+    },
+    {
+      "path": "src/icons.tsx",
+      "sha256": "abde2623f0c3fc0b04fc03f4239f2b7f321dd601f5229d8f67d755899598957d"
+    },
+    {
+      "path": "src/main.tsx",
+      "sha256": "f8163ef296414e8de723d8edf21d41bfd776d222d8e09313e1280aefd9f4b31a"
+    },
+    {
+      "path": "src/styles.css",
+      "sha256": "eac98abf918e43fe446f295d1e6f86882ad2fb6954d28703c6babdefe072648d"
+    },
+    {
+      "path": "src/types.ts",
+      "sha256": "82ad19afb5c7d33c24ac2821413c2d63197d6353d343595645d0cdb1b718838c"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "920fc71fadcc0bb2b32ac17a3f5beb8e0492b694aa211f84e9bbea631983a2dc"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "8d55e641c55ffc4d7967ab63b96f99298befd43092e7dcd5d116e04a4d81570b"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/assets/index-DGuP_mOn.js",
+      "sha256": "6cb224683c56944a46c0b629e29acfb8d22af76ef4fb10b83c5aaff353d23bef"
+    },
+    {
+      "path": "/assets/graph-CP_L6tHG.js",
+      "sha256": "3696027c4958710564fbad1d383f40d1d3a362a28c24108c6f6c23ff21384892"
+    },
+    {
+      "path": "/assets/index-DvmxTQDi.css",
+      "sha256": "06c0b71e460e065a40967981c61261faa95e87dc405bf3f037d3b0bb7b6673f2"
+    }
+  ],
+  "records": 3021,
+  "requests": 1010,
+  "groups": 1001,
+  "maxRequesters": 3,
+  "embeddingRevision": "751bff37182d3f1213fa05d7196b954e230abad9",
+  "savedConversation": {
+    "messages": 2,
+    "unchanged": true
+  },
+  "tests": {
+    "passed": 36,
+    "failed": 0
+  },
+  "browser": {
+    "intermediateCitationRings": "Two white rings observed on the existing webhook answer",
+    "finalLayout": "Not visually verified. Browser tool reports local browser use disabled."
+  }
+}

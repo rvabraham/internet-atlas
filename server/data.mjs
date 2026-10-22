@@ -1,6 +1,8 @@
 import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { citedSourceIds } from '../shared/citations.mjs';
+import { recountSignals } from './signals.mjs';
 
 export const ROOT = resolve(import.meta.dirname, '..');
 export const TOPICS = [
@@ -12,6 +14,7 @@ export const TOPICS = [
   { id: 'integrations', name: 'Integrations', color: '#93b6c4', query: 'API integration', repo: 'n8n-io/n8n', terms: ['integration', 'api', 'webhook', 'automation', 'n8n', 'connector'] },
   { id: 'auth', name: 'Identity & access', color: '#c894b7', query: 'authentication', repo: 'supabase/auth', terms: ['auth', 'authentication', 'oauth', 'login', 'permission', 'session'] },
   { id: 'billing', name: 'Billing & payments', color: '#bccb87', query: 'billing', repo: 'getlago/lago', terms: ['billing', 'payment', 'subscription', 'invoice', 'pricing', 'stripe'] },
+  { id: 'software', name: 'Software requests', color: '#b4b1a0', query: 'software', repo: '', terms: ['software', 'tool', 'app', 'desktop', 'product', 'self-hosted'] },
 ];
 
 export function plainText(input = '') {
@@ -35,7 +38,7 @@ export function dedupe(records) { return [...new Map(records.filter(r => r.id &&
 
 export async function publicFetch(url) {
   const parsed = new URL(url);
-  if (!['api.github.com', 'hn.algolia.com', 'hacker-news.firebaseio.com'].includes(parsed.hostname) || parsed.protocol !== 'https:') throw new Error('Unsupported data source');
+  if (!['api.github.com', 'hn.algolia.com', 'hacker-news.firebaseio.com', 'api.stackexchange.com'].includes(parsed.hostname) || parsed.protocol !== 'https:') throw new Error('Unsupported data source');
   const headers = { 'User-Agent': 'Internet-Atlas-local/0.1', Accept: 'application/json' };
   if (parsed.hostname === 'api.github.com' && process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
   const response = await fetch(url, { headers, signal: AbortSignal.timeout(18000), redirect: 'error' });
@@ -44,34 +47,8 @@ export async function publicFetch(url) {
 }
 
 export async function ingest(onProgress = () => {}, previous = { records: [] }) {
-  const records = [], status = [];
-  for (const [index, topic] of TOPICS.entries()) {
-    onProgress({ topic: topic.name, index, total: TOPICS.length });
-    const [hn, gh] = await Promise.allSettled([
-      publicFetch(`https://hn.algolia.com/api/v1/search_by_date?query=${encodeURIComponent(topic.query)}&tags=comment&hitsPerPage=100`),
-      publicFetch(`https://api.github.com/search/issues?q=${encodeURIComponent(`repo:${topic.repo} is:issue is:open -label:documentation`)}&sort=comments&order=desc&per_page=16`),
-    ]);
-    const fetchedAt = new Date().toISOString();
-    let hnCount = 0;
-    if (hn.status === 'fulfilled') for (const hit of hn.value.hits || []) {
-      const text = plainText(hit.comment_text);
-      if (text.length < 100 || hit.author === '[deleted]') continue;
-      if (!matchesCollection(topic, `${hit.story_title || ''} ${text}`) || hnCount >= 24) continue;
-      hnCount++;
-      records.push({ id: `hn:${hit.objectID}`, source: 'hn', topicId: topic.id, title: plainText(hit.story_title || topic.name), text: text.slice(0, 6000), author: hit.author, authorId: `hn:${hit.author}`, profileUrl: `https://news.ycombinator.com/user?id=${encodeURIComponent(hit.author)}`, url: `https://news.ycombinator.com/item?id=${hit.objectID}`, date: hit.created_at, fetchedAt, status: 'public', replies: 0 });
-    }
-    if (gh.status === 'fulfilled') for (const hit of gh.value.items || []) {
-      const text = plainText(hit.body || hit.title);
-      if (!hit.user || hit.user.type === 'Bot' || text.length < 50) continue;
-      records.push({ id: `gh:${hit.id}`, source: 'github', topicId: topic.id, title: hit.title, text: text.slice(0, 6000), author: hit.user.login, authorId: `github:${hit.user.login}`, profileUrl: hit.user.html_url, url: hit.html_url, apiUrl: hit.url, date: hit.created_at, updatedAt: hit.updated_at, fetchedAt, status: hit.state, replies: hit.comments, repository: topic.repo });
-    }
-    if (hn.status === 'rejected') records.push(...previous.records.filter(r => r.topicId === topic.id && r.source === 'hn'));
-    if (gh.status === 'rejected') records.push(...previous.records.filter(r => r.topicId === topic.id && r.source === 'github'));
-    status.push({ topicId: topic.id, hn: hn.status === 'fulfilled' ? 'ok' : hn.reason.message, github: gh.status === 'fulfilled' ? 'ok' : gh.reason.message, fetchedAt });
-    // GitHub anonymous search permits ten requests a minute.
-    if (index < TOPICS.length - 1) await new Promise(r => setTimeout(r, 6500));
-  }
-  return { version: 1, fetchedAt: new Date().toISOString(), topics: TOPICS, records: dedupe(records), status };
+  const { ingestPublic } = await import('./sources.mjs');
+  return ingestPublic(onProgress, previous);
 }
 
 export function searchRecords(corpus, query, limit = 18, topicId) {
@@ -91,14 +68,15 @@ export function rankLeads(corpus, idea, limit = 15) {
   const ranked = searchRecords(corpus, `${idea.title} ${idea.description}`, 100, undefined);
   const byAuthor = new Map();
   const titleTerms = keywords(idea.title);
+  const relatedSignals = new Set(evidence.map(record => record.signalId).filter(Boolean));
   for (const record of ranked) {
     if (record.status === 'deleted' || record.status === 'closed') continue;
     const recordWords = new Set(tokens(`${record.title} ${record.text}`));
     const titleOverlap = titleTerms.filter(t => recordWords.has(t)).length;
     if (!titleOverlap && record.score < 3) continue;
     const sharesTool = /\b(?:i (?:am|'m) the founder|i (?:built|created|launched)|we (?:built|created|launched)|our (?:tool|product|platform))\b/i.test(record.text);
-    const kind = sharesTool ? 'Shares a tool' : record.source === 'github' ? 'Issue author' : 'Discussant';
-    const score = (record.score + titleOverlap * 3 + (record.topicId === inferredTopic ? 1 : 0)) * (sharesTool ? .25 : 1);
+    const kind = sharesTool ? 'Shares a tool' : record.request && record.request.type !== 'endorsement' ? 'Requested a solution' : record.source === 'github' ? 'Issue author' : 'Discussant';
+    const score = (record.score + titleOverlap * 3 + (record.topicId === inferredTopic ? 1 : 0) + (record.request ? 3 : 0) + (relatedSignals.has(record.signalId) ? 8 : 0)) * (sharesTool ? .25 : 1);
     if (score < 1) continue;
     const existing = byAuthor.get(record.authorId);
     if (existing) { existing.sourceIds.push(record.id); existing.rank += score * 0.15; }
@@ -108,6 +86,7 @@ export function rankLeads(corpus, idea, limit = 15) {
 }
 
 export function initialState() { return { idea: null, leads: [], drafts: {}, profiles: {}, messages: [], threadId: null, pinned: [], selectedModel: null }; }
+const referencedSources = (state, records) => new Set([...state.pinned, ...(state.idea?.sourceIds || []), ...state.leads.flatMap(l => l.sourceIds), ...state.messages.flatMap(m => [...(m.sourceIds || []), ...citedSourceIds(m.text, records)])]);
 export class AtlasStore {
   constructor(directory = resolve(ROOT, '.atlas')) { this.directory = directory; this.state = initialState(); this.corpus = { topics: TOPICS, records: [], status: [] }; this.queue = Promise.resolve(); }
   async load() {
@@ -117,11 +96,12 @@ export class AtlasStore {
       try {
         const candidate = JSON.parse(await readFile(file, 'utf8'));
         candidates.push(candidate);
-        if (!this.corpus.fetchedAt || Date.parse(candidate.fetchedAt) >= Date.parse(this.corpus.fetchedAt)) this.corpus = candidate;
+        const freshness = Date.parse(candidate.fetchedAt), current = Date.parse(this.corpus.fetchedAt);
+        if (!this.corpus.fetchedAt || freshness > current || freshness === current && Date.parse(candidate.analysis?.generatedAt || candidate.fetchedAt) >= Date.parse(this.corpus.analysis?.generatedAt || this.corpus.fetchedAt)) this.corpus = candidate;
       } catch { /* Seed is optional until first ingestion. */ }
     }
     try { this.state = { ...initialState(), ...JSON.parse(await readFile(resolve(this.directory, 'state.json'), 'utf8')) }; } catch { /* Fresh local workspace. */ }
-    const references = new Set([...this.state.pinned, ...(this.state.idea?.sourceIds || []), ...this.state.leads.flatMap(l => l.sourceIds)]);
+    const references = referencedSources(this.state, candidates.flatMap(c => c.records));
     const known = new Set(this.corpus.records.map(r => r.id));
     for (const candidate of candidates) for (const record of candidate.records) {
       if (references.has(record.id) && !known.has(record.id)) { this.corpus.records.push(record); known.add(record.id); }
@@ -138,12 +118,11 @@ export class AtlasStore {
   }
   async setCorpus(corpus) {
     if (!corpus.records.length) throw new Error('No records returned. Existing atlas was kept.');
-    const references = new Set([...this.state.pinned, ...(this.state.idea?.sourceIds || []), ...this.state.leads.flatMap(l => l.sourceIds)]);
+    const references = referencedSources(this.state, this.corpus.records);
     const incomingIds = new Set(corpus.records.map(r => r.id));
     corpus.records.push(...this.corpus.records.filter(r => references.has(r.id) && !incomingIds.has(r.id)));
     this.corpus = corpus;
     await this.persistCorpus();
-    if (this.state.idea) this.state.leads = rankLeads(this.corpus, this.state.idea);
     await this.save();
   }
   async persistCorpus() {
@@ -174,23 +153,30 @@ export class AtlasStore {
       if (lead.source === 'github') {
         const profile = await publicFetch(`https://api.github.com/users/${encodeURIComponent(lead.name)}`);
         Object.assign(result, { displayName: profile.name, bio: plainText(profile.bio), company: plainText(profile.company) || null, website: /^https?:\/\//.test(profile.blog) ? profile.blog : null, email: profile.email || null });
-      } else {
+      } else if (lead.source === 'hn') {
         const profile = await publicFetch(`https://hacker-news.firebaseio.com/v0/user/${encodeURIComponent(lead.name)}.json`);
         result.bio = plainText(profile?.about || '');
         const email = result.bio.match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i)?.[0];
         result.email = email || null;
-      }
+      } else result.status = 'link-only';
     } catch (error) { result.status = error.message; }
     for (const sourceId of lead.sourceIds.slice(0, 2)) {
       const source = this.source(sourceId);
       try {
-        const fresh = await publicFetch(source.apiUrl || `https://hacker-news.firebaseio.com/v0/item/${source.id.slice(3)}.json`);
-        source.status = fresh.deleted || fresh.dead ? 'deleted' : fresh.state || 'public';
+        if (!source.apiUrl && source.source !== 'hn') { result.sourceChecks.push({ sourceId, status: 'unverified' }); continue; }
+        const response = await publicFetch(source.apiUrl || `https://hacker-news.firebaseio.com/v0/item/${source.id.slice(3)}.json`);
+        const fresh = source.source === 'stackexchange' ? response.items?.[0] : response;
+        source.status = !fresh || fresh.deleted || fresh.dead ? 'deleted' : fresh.closed_date ? 'closed' : fresh.state || 'public';
+        if (source.parentApiUrl && source.status !== 'deleted') {
+          const parent = await publicFetch(source.parentApiUrl);
+          if (parent.state === 'closed') source.status = 'closed';
+        }
         if (source.status === 'deleted') source.text = 'This source was removed by its author.';
         source.fetchedAt = new Date().toISOString();
         result.sourceChecks.push({ sourceId, status: source.status, checkedAt: source.fetchedAt });
       } catch (error) { result.sourceChecks.push({ sourceId, status: 'unverified', error: error.message }); }
     }
+    this.corpus = recountSignals(this.corpus);
     this.state.profiles[id] = result; await this.persistCorpus(); await this.save(); return result;
   }
   async saveDraft(input) {
@@ -201,5 +187,5 @@ export class AtlasStore {
     this.state.drafts[`${lead.id}:${draft.channel}`] = draft;
     await this.save(); return draft;
   }
-  publicState() { const { threadId, ...state } = this.state; return { ...state, corpus: this.corpus }; }
+  publicState() { const { threadId, agentToolVersion, ...state } = this.state; return { ...state, corpus: this.corpus }; }
 }

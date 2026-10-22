@@ -5,7 +5,7 @@ export async function api<T = any>(path: string, body?: unknown): Promise<T> {
   return result;
 }
 export function niceDate(value: string) { return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
-export function sourceName(source: string) { return source === 'hn' ? 'Hacker News' : 'GitHub'; }
+export function sourceName(source: string) { return ({ hn: 'Hacker News', github: 'GitHub', reddit: 'Reddit', stackexchange: 'Software Recs', x: 'X', linkedin: 'LinkedIn' } as Record<string, string>)[source] || source; }
 export function download(name: string, text: string, type = 'text/plain') {
   const url = URL.createObjectURL(new Blob([text], { type })); const a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

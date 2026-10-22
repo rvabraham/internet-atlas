@@ -1,10 +1,12 @@
 # Internet Atlas
 
-Explore public software problems, shape an idea, find people worth interviewing, and draft the first conversation.
+Find explicit software requests in public discussion, inspect their evidence, shape an idea and prepare the first conversation.
 
 Two linked graphs share one Codex agent. The app runs on your computer at **http://localhost:3000**.
 
-![Internet Atlas desktop view](docs/atlas.png)
+![Original v1 interface](docs/atlas.png)
+
+The screenshot shows the original v1 layout. The current graph uses looser neighborhoods and request groups.
 
 ## Run
 
@@ -28,35 +30,43 @@ npm start
 
 ## Use
 
-1. Explore a collection or search the atlas. Select a source to read its original text, author and date. Pin useful evidence.
-2. Create your own idea, or ask Atlas to investigate one. Edit the audience, workflow and attached evidence.
+1. Open **Requests** to inspect grouped asks, requester counts, tiers and original quotes. Use **Topics** or search to explore the wider corpus. Select a source to read its author, date and original post, then pin useful evidence.
+2. Ask Atlas to investigate a problem or collect more requests for a specific need. White rings mark cited sources; click a citation to inspect its evidence. Create or edit an idea with a clear audience, workflow and supporting sources.
 3. Choose **Find people**. Each person connects to their supporting sources. Dashed links indicate inferred relevance.
 4. Check a public profile, then draft a DM or email. Edit, save, copy or export the result. The app has no send endpoint.
 
-The right agent panel stays with both graphs. It can read the corpus, focus nodes, save an idea, find people, check profiles and save drafts. It does not simulate model responses. Provider errors appear in the conversation. The model can be stopped.
+The same agent stays with both graphs. It reads sources and request groups, runs targeted searches of Hacker News and public Reddit RSS, rebuilds groups, focuses evidence, saves ideas, finds people, checks public profiles and saves drafts. Responses come from the connected model. Provider errors and partial coverage remain visible; the model can be stopped.
 
 Editing the idea invalidates previous leads and drafts. Drafts are tied to the current idea revision. Saved research can be exported as Markdown.
 
 ## Public data and cost
 
-The repository includes a real cached snapshot of **272 public records**, fetched October 22, 2026. The app works without fetching fresh data on startup. Eight collections cover agents, retrieval, data infrastructure, testing, observability, integrations, authentication and billing. Collection selection is curated. The visualization is not a census of the internet.
+The October 22, 2026 snapshot contains **3,021 public records and 1,010 detected candidate asks**. No inferred group reaches 10 distinct recent requesters. The app opens the cached snapshot without fetching fresh sources. Curated collections cover agents, retrieval, data infrastructure, testing, observability, integrations, authentication, billing and general software requests. Coverage is a sample, not a census of the internet.
 
 | Source | Use | Access |
 | --- | --- | --- |
-| [HN Algolia API](https://hn.algolia.com/api) | Public comments and their original discussion links | Free, no key |
+| [HN Algolia API](https://hn.algolia.com/api) | Public asks, comments and original discussion links | Free, no key |
 | [Hacker News API](https://github.com/HackerNews/API) | Public bios and source rechecks | Free, no key |
-| [GitHub REST API](https://docs.github.com/en/rest) | Public issues and profiles | Free, 60 requests/hour without a token; optional `GITHUB_TOKEN` increases limits |
+| [GitHub REST API](https://docs.github.com/en/rest) | Public feature requests, selected comments and profiles | Free, 60 ordinary requests/hour without a token; optional `GITHUB_TOKEN` increases limits; search is separately limited |
+| [Reddit RSS](https://support.reddithelp.com/hc/en-us/articles/54353370049684-Changelog-October-8-2026) | Public subreddit search feeds | Currently no key; RSS ends November 13, 2026; new API access requests close October 31 |
+| [Stack Exchange API](https://api.stackexchange.com/docs) | Software Recommendations questions with attribution and license information | Provider quotas and access controls apply; failures surface as unavailable coverage |
 | [Codex app-server](https://developers.openai.com/codex/app-server) | The local agent, using managed ChatGPT authentication | Uses your existing subscription and its usage limits |
 
-No additional paid service is required. Cline, Parallel and Composio credits are not used. GitHub search has a separate rate limit. Refreshes are paced, cached and surface partial coverage. Failed collections retain their previous records. The refresh button updates the local cache; `npm run ingest` rebuilds the versioned seed.
+No additional paid data or embedding service is required. The local MiniLM model is downloaded on first analysis and cached for reuse. Codex uses your existing subscription limits. Refreshes are paced and preserve previous records when a source fails. The refresh button updates the local cache; `npm run ingest` fetches sources, analyzes requests and rebuilds the versioned seed. `npm run analyze` reanalyzes the cached corpus.
+
+X is not connected and requires developer-console setup and pay-per-usage API access. No X or LinkedIn dump has been ingested. Traceable external post datasets can be imported with `npm run import`. See [data sources and the import CLI](docs/data-sources.md) for exact flags, required author/post/date/text fields, dataset provenance and license requirements. Profile dumps and synthetic records are not request evidence.
 
 Sources retain their original URLs, public usernames, dates and retrieval timestamps. Text remains attributable to its original authors. Public profiles may contain self-reported affiliations or email addresses. The app never infers an email from a name or domain.
 
 ## How the graph works
 
-The discovery graph contains collection hubs, source records and public authors. Sources are deduplicated by original ID. Multiple records from one author remain separate records and one person. Sparse lexical similarity links connect related sources. The layout uses stable community positions and golden-angle spacing so opening panels does not rearrange the map.
+Explicit ask rules identify candidate product searches and feature requests. Local embeddings from `Xenova/all-MiniLM-L6-v2` group similar needs, with a similarity guard against chaining unrelated requests together. Membership is inferred and needs review against the literal source quotes.
 
-Source size reflects discussion activity; person size reflects attached records. Neither represents market size. Search and lead matching use transparent lexical relevance, collection context and source provenance. Explicit promotion of one's own tool is marked and ranked lower. This is a starting point for investigation, not a trained intent classifier. Relevant authors may be competitors, experts or users. A complaint is not purchase intent.
+Tiers count distinct public accounts making explicit requests in the past 365 days: **10+ Recurring, 20+ Growing, 50+ Strong**; smaller groups are Early. Canonical URLs, long copied posts and repeated requests by one account do not inflate the count. Votes, brief endorsements, promotions, bots and closed or removed posts are excluded. Historical and dataset evidence retains its original dates. Accounts on different platforms may belong to the same person. No tier establishes willingness to pay.
+
+The discovery graph contains curated collection hubs, source records, public authors and request groups. Solid links show authorship and collection assignment; dashed links show inferred semantic membership or idea relevance. Detected request sources are larger than general discussion. White rings identify cited evidence. Node size does not measure market size. Stable positions keep inspection from rearranging the map.
+
+Search and lead ranking combine lexical relevance, collection context, request-group membership and provenance. Public authors may be users, competitors or experts. People are candidates for an interview, not validated customers.
 
 The agent reads the same records through bounded tools. It can investigate beyond a short excerpt by retrieving the full cached source. Before drafting, it is instructed to check the public profile and refresh supporting evidence. Closed or removed sources are flagged; removed content is redacted locally after a successful recheck. Network failures remain unverified rather than being reported as successful checks.
 
@@ -77,9 +87,15 @@ Graph exploration is inspired by [Graphify](https://github.com/Graphify-Labs/gra
 ## Project map
 
 - `src/`: React interface, graph and agent dock
-- `server/data.mjs`: ingestion, cache, search, ideas, lead matching and drafts
+- `server/data.mjs`: local cache, search, ideas, lead matching and drafts
+- `server/sources.mjs`: public-source ingestion and targeted request collection
+- `server/requests.mjs`: explicit ask rules and 10/20/50 requester tiers
+- `server/signals.mjs`: local embeddings, semantic groups and dated author counts
+- `server/imports.mjs`: external-post validation and dataset provenance
+- `shared/citations.mjs`: canonical source URLs and citation matching
 - `server/agent.mjs`: Codex JSON-RPC bridge and Atlas tools
 - `server/index.mjs`: local API, SSE and web server
 - `data/seed.json`: source-linked public snapshot
-- `scripts/ingest.mjs`: seed refresh CLI
-- `tests/workflow.test.mjs`: provenance, revision invalidation, persistence, origin checks and model enforcement
+- `scripts/ingest.mjs`, `scripts/analyze.mjs`, `scripts/import.mjs`: fetch, analyze and import CLIs
+- `tests/workflow.test.mjs`, `tests/signals.test.mjs`: workflow, provenance, counting, grouping, import and citation checks
+- `docs/data-sources.md`: provider access notes and import flags

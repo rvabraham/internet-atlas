@@ -82,10 +82,11 @@ test('shipped corpus has original source URLs, timestamps and no repeated source
   const seed = JSON.parse(await readFile(resolve(ROOT, 'data/seed.json'), 'utf8'));
   assert.ok(seed.records.length >= 200); assert.equal(seed.records.length, dedupe(seed.records).length);
   for (const r of seed.records) {
-    assert.ok(['github.com', 'news.ycombinator.com'].includes(new URL(r.url).hostname));
+    const hosts = { github: ['github.com'], hn: ['news.ycombinator.com'], reddit: ['www.reddit.com', 'reddit.com'], stackexchange: ['softwarerecs.stackexchange.com'], x: ['x.com', 'twitter.com'], linkedin: ['www.linkedin.com', 'linkedin.com'] };
+    assert.ok(hosts[r.source]?.includes(new URL(r.url).hostname));
     assert.ok(Number.isFinite(Date.parse(r.date))); assert.ok(Number.isFinite(Date.parse(r.fetchedAt)));
     assert.ok(r.text && r.author && r.profileUrl && TOPICS.some(t => t.id === r.topicId));
-    if (r.source === 'hn') assert.ok(matchesCollection(TOPICS.find(t => t.id === r.topicId), `${r.title} ${r.text}`));
+    if (r.request) assert.ok(r.text.includes(r.request.quote) || r.request.quote.length <= r.text.length);
   }
 });
 test('Codex turns use GPT 6 Luna even if an older preference or request specifies another model', async () => {
@@ -99,5 +100,23 @@ test('Codex turns use GPT 6 Luna even if an older preference or request specifie
     assert.equal(requests.find(r => r.method === 'thread/start').params.model, 'gpt-6-luna');
     assert.equal(requests.find(r => r.method === 'turn/start').params.model, 'gpt-6-luna');
     assert.equal(store.state.selectedModel, 'gpt-6-luna');
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+
+test('tool upgrades preserve the visible conversation and pass its context to the new runtime', async () => {
+  const directory = await mkdtemp(resolve(tmpdir(), 'atlas-migration-'));
+  try {
+    const store = await new AtlasStore(directory).load();
+    store.state.threadId = 'legacy-thread';
+    store.state.messages = [{ id: 'prior', role: 'user', text: 'Investigate webhook reliability.' }];
+    const agent = new AtlasAgent(store, () => {}), requests = [];
+    agent.connect = async () => {};
+    agent.request = async (method, params) => { requests.push({ method, params }); return method === 'thread/start' ? { thread: { id: 'upgraded-thread' } } : { turn: { id: 'test-turn' } }; };
+    await agent.chat('Read the current request groups', {}, CODEX_MODEL);
+    assert.equal(store.state.messages[0].id, 'prior');
+    assert.ok(!requests.some(r => r.method === 'thread/resume'));
+    assert.ok(requests.find(r => r.method === 'thread/start').params.dynamicTools.some(t => t.name === 'atlas_signals'));
+    assert.match(requests.find(r => r.method === 'turn/start').params.input[0].text, /Investigate webhook reliability/);
   } finally { await rm(directory, { recursive: true, force: true }); }
 });

@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { AtlasStore, ROOT, ingest, searchRecords } from './data.mjs';
 import { AtlasAgent } from './agent.mjs';
 import { localOnly } from './security.mjs';
+import { analyzeCorpus } from './signals.mjs';
 
 const app = express();
 const server = createServer(app);
@@ -29,11 +30,11 @@ app.post('/api/leads/research', async (req, res) => { const profile = await stor
 app.post('/api/draft', async (req, res) => { const draft = await store.saveDraft(req.body); emit('state', store.publicState()); res.json(draft); });
 app.post('/api/pins', async (req, res) => { store.state.pinned = [...new Set(req.body.ids || [])].filter(id => store.source(id)).slice(0, 30); await store.save(); emit('state', store.publicState()); res.json({ ok: true }); });
 app.post('/api/refresh', async (_req, res) => {
-  if (refreshing) return res.status(409).json({ error: 'A refresh is already running.' });
-  refreshing = true; res.json({ ok: true }); emit('refresh', { status: 'running' });
-  try { const corpus = await ingest(progress => emit('refresh', { status: 'running', ...progress }), store.corpus); await store.setCorpus(corpus); emit('state', store.publicState()); emit('refresh', { status: 'complete' }); }
+  if (refreshing || store.collecting || agent.active) return res.status(409).json({ error: 'A refresh is already running.' });
+  refreshing = true; store.collecting = true; res.json({ ok: true }); emit('refresh', { status: 'running' });
+  try { const progress = detail => emit('refresh', { status: 'running', ...detail }); const corpus = await ingest(progress, store.corpus); await store.setCorpus(await analyzeCorpus(corpus, store.directory, progress)); emit('state', store.publicState()); emit('refresh', { status: 'complete' }); }
   catch (error) { emit('refresh', { status: 'error', error: error.message }); }
-  finally { refreshing = false; }
+  finally { refreshing = false; store.collecting = false; }
 });
 app.get('/api/agent/status', (_req, res) => res.json(agent.info()));
 app.post('/api/agent/connect', async (_req, res) => res.json(await agent.connect()));
