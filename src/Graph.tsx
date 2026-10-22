@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { DataSet } from 'vis-data';
 import { Network, type Options, type Node, type Edge } from 'vis-network';
 import type { AtlasState, GraphHandle, View } from './types';
+import { discoveryVisibility } from '../shared/graph-visibility.mjs';
 
 type Props = { state: AtlasState; view: View; topicId: string | null; sourceFilters: string[]; selected: string | null; query: string; searchNodeIds: string[] | null; relatedIds: string[]; referencedIds: string[]; onSelect: (id: string | null) => void; onReady: () => void };
 const short = (s: string, n = 32) => s.length > n ? s.slice(0, n - 1) + '…' : s;
@@ -28,7 +29,34 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
   const searchKey = searchNodeIds?.join('|') || '', relatedKey = relatedIds.join('|');
   const references = useRef(new Set<string>()); references.current = new Set(referencedIds);
   const pulses = useRef(new Map<string, number[]>()), pulseFrame = useRef<number | null>(null);
+  const pulseVisibilityDirty = useRef(false);
+  const applyVisibility = useRef<(() => void) | null>(null);
+  const baseSizes = useRef(new Map<string, number>()), baseWidths = useRef(new Map<string, number>());
+  const minimumRadii = useRef(new Map<string, number>()), readableIds = useRef(new Set<string>()), readableEdges = useRef(new Set<string>());
+  const focusedDiscovery = useRef(false), sizeFrame = useRef<number | null>(null), lastSizedScale = useRef(0);
   const hubIds = useRef<string[]>([]);
+  const queueSizing = () => {
+    if (!focusedDiscovery.current || sizeFrame.current !== null) return;
+    sizeFrame.current = requestAnimationFrame(() => {
+      sizeFrame.current = null;
+      const n = network.current; if (!n || !focusedDiscovery.current) return;
+      const scale = Math.max(.001, n.getScale()); lastSizedScale.current = scale;
+      const nodes: { id: string; size: number }[] = [], edges: { id: string; width: number }[] = [];
+      for (const id of readableIds.current) {
+        const node = nodeData.current.get(id); if (!node || node.hidden) continue;
+        const size = Math.max(baseSizes.current.get(id) || 5, (minimumRadii.current.get(id) || 3.5) / scale);
+        if (Math.abs((node.size || 0) - size) > .01) nodes.push({ id, size });
+      }
+      for (const id of readableEdges.current) {
+        const edge = edgeData.current.get(id); if (!edge || edge.hidden) continue;
+        if (!baseWidths.current.has(id)) baseWidths.current.set(id, edge.width || .65);
+        const width = Math.max(baseWidths.current.get(id)!, .55 / scale);
+        if (Math.abs((edge.width || .65) - width) > .01) edges.push({ id, width });
+      }
+      if (nodes.length) nodeData.current.update(nodes);
+      if (edges.length) edgeData.current.update(edges);
+    });
+  };
   useImperativeHandle(ref, () => ({
     pulse: ids => {
       const n = network.current; if (!n) return;
@@ -46,6 +74,7 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
         }
         pulses.current.set(id, [...(pulses.current.get(id) || []).filter(start => now - start < 1400), now].slice(-4));
       }
+      applyVisibility.current?.();
       n.redraw();
     },
     fit: () => network.current?.fit({ animation: reduced() ? false : { duration: 350, easingFunction: 'easeInOutQuad' } }),
@@ -79,8 +108,11 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
     n.on('click', ({ nodes }) => onSelectRef.current(nodes[0] ? String(nodes[0]) : null));
     n.on('hoverNode', () => { if (element.current) element.current.style.cursor = 'pointer'; });
     n.on('blurNode', () => { if (element.current) element.current.style.cursor = 'grab'; });
+    n.on('zoom', queueSizing);
+    n.on('animationFinished', queueSizing);
     n.on('afterDrawing', (ctx: CanvasRenderingContext2D) => {
       const scale = n.getScale();
+      if (focusedDiscovery.current && Math.abs(scale - lastSizedScale.current) > .0001) queueSizing();
       const hubs = hubIds.current.map(id => nodeData.current.get(id)).filter((node): node is NonNullable<typeof node> => node !== null && !node.hidden);
       for (const node of hubs) {
         const position = n.getPositions([node.id!])[node.id!]; if (!position) continue;
@@ -101,10 +133,10 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
       const now = performance.now();
       for (const [id, starts] of pulses.current) {
         const active = starts.filter(start => now - start < (reduced() ? 650 : 1400));
-        if (!active.length) { pulses.current.delete(id); continue; }
+        if (!active.length) { pulses.current.delete(id); pulseVisibilityDirty.current = true; continue; }
         pulses.current.set(id, active);
         const node = nodeData.current.get(id), position = n.getPositions([id])[id];
-        if (!node || !position) continue;
+        if (!node || node.hidden || !position) continue;
         const age = now - active[active.length - 1];
         const phase = reduced() ? 1 : (Math.cos(age / 1400 * Math.PI * 6) + 1) / 2;
         ctx.save(); ctx.globalAlpha = .15 + phase * .85; ctx.beginPath();
@@ -112,9 +144,9 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
         ctx.strokeStyle = '#fff'; ctx.lineWidth = (1.5 + phase) / scale;
         ctx.shadowColor = '#ffffff'; ctx.shadowBlur = phase * 16 / scale; ctx.stroke(); ctx.restore();
       }
-      if (pulses.current.size && pulseFrame.current === null) pulseFrame.current = requestAnimationFrame(() => { pulseFrame.current = null; if (network.current === n) n.redraw(); });
+      if ((pulses.current.size || pulseVisibilityDirty.current) && pulseFrame.current === null) pulseFrame.current = requestAnimationFrame(() => { pulseFrame.current = null; if (network.current === n) { if (pulseVisibilityDirty.current) { pulseVisibilityDirty.current = false; applyVisibility.current?.(); } n.redraw(); } });
     });
-    return () => { if (pulseFrame.current !== null) cancelAnimationFrame(pulseFrame.current); pulseFrame.current = null; pulses.current.clear(); n.destroy(); network.current = null; lastGraph.current = ''; };
+    return () => { if (pulseFrame.current !== null) cancelAnimationFrame(pulseFrame.current); if (sizeFrame.current !== null) cancelAnimationFrame(sizeFrame.current); sizeFrame.current = null; pulseFrame.current = null; pulses.current.clear(); n.destroy(); network.current = null; lastGraph.current = ''; };
   }, []);
   useEffect(() => {
     const n = network.current; if (!n) return;
@@ -137,7 +169,7 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
           const [jx, jy] = normalPair(randomFor(source.id + ':offset'));
           const spread = 190 + Math.sqrt(sources.length) * 5;
           const rotation = i * .73, dx = u * spread * 1.2 + v * spread * .28, dy = v * spread * .7;
-          const point = { x: x + dx * Math.cos(rotation) - dy * Math.sin(rotation) + jx * 28, y: y + dx * Math.sin(rotation) + dy * Math.cos(rotation) + jy * 28 };
+          const point = { x: x + dx * Math.cos(rotation) - dy * Math.sin(rotation) + jx * 72, y: y + dx * Math.sin(rotation) + dy * Math.cos(rotation) + jy * 72 };
           positionMap.set(source.id, point);
           nodes.push({ id: source.id, ...point, label: '', size: source.request ? 5 : 3.5, color: { background: alpha(topic.color, source.request ? 'd0' : '75'), border: alpha(topic.color, '10'), highlight: { background: topic.color, border: '#f0efe9' }, hover: { background: topic.color, border: '#f0efe9' } } });
           edges.push({ id: `topic:${source.id}`, from: topic.id, to: source.id, color: { color: alpha(topic.color, '09'), highlight: alpha(topic.color, '90') } });
@@ -179,54 +211,92 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
       });
     }
     hubIds.current = nodes.filter(node => (node as any).atlasHub).map(node => String(node.id));
+    baseSizes.current = new Map(nodes.map(node => [String(node.id), node.size || 5]));
+    baseWidths.current = new Map(edges.map(edge => [String(edge.id), edge.width || .65]));
+    minimumRadii.current = new Map(nodes.map(node => [String(node.id), 2]));
+    for (const source of state.corpus.records) minimumRadii.current.set(source.id, 3.5);
+    for (const signal of state.corpus.signals || []) minimumRadii.current.set(signal.id, 6);
+    for (const topic of topics) minimumRadii.current.set(topic.id, 7);
     nodeData.current.clear(); edgeData.current.clear(); nodeData.current.add(nodes); edgeData.current.add(edges);
     n.setOptions({ physics: { enabled: false } });
     requestAnimationFrame(() => { if (network.current === n) { n.fit({ animation: false }); onReadyRef.current(); } });
   }, [state.corpus.fetchedAt, state.corpus.analysis?.generatedAt, state.idea?.revision, state.leads, view]);
   useEffect(() => {
     const n = network.current; if (!n) return;
-    // A cited record is always visible, including evidence beyond a person's first three sources.
-    for (const id of referencedIds) {
-      if (nodeData.current.get(id)) continue;
-      const source = state.corpus.records.find(r => r.id === id); if (!source) continue;
-      const owner = state.leads.find(l => l.sourceIds.includes(id));
-      const origin = owner ? n.getPositions([owner.id])[owner.id] : { x: -380, y: -150 };
-      const color = state.corpus.topics.find(t => t.id === source.topicId)?.color || '#b5a1ec';
-      const hash = [...id].reduce((sum, c) => sum + c.charCodeAt(0), 0);
-      nodeData.current.add({ id, x: (origin?.x || 0) + Math.cos(hash) * 90, y: (origin?.y || 0) + Math.sin(hash) * 90, size: 5, color: {background: color, border: color}, label: '' });
-      if (owner) edgeData.current.add({ id: `cited-author:${id}`, from: owner.id, to: id, color: {color: color + '66'} });
-    }
-    const sourceMap = new Map(state.corpus.records.map(s => [s.id, s]));
-    const authorMap = new Map<string, typeof state.corpus.records>();
-    for (const source of state.corpus.records) { const records = authorMap.get(source.authorId) || []; records.push(source); authorMap.set(source.authorId, records); }
-    const signalMap = new Map((state.corpus.signals || []).map(s => [s.id, s]));
-    const leadMap = new Map(state.leads.map(l => [l.id, l]));
-    const signalMembers = signalMap.get(selected || '')?.sourceIds;
-    const neighborhoods = signalMembers ? new Set([selected, ...signalMembers, ...signalMembers.map(id => sourceMap.get(id)?.authorId)]) : selected && nodeData.current.get(selected) ? new Set([selected, ...n.getConnectedNodes(selected) as string[]]) : null;
-    if (neighborhoods) for (const id of relatedIds) {
-      neighborhoods.add(id);
-      const members = signalMap.get(id)?.sourceIds || (sourceMap.has(id) ? [id] : []);
-      for (const member of members) { neighborhoods.add(member); neighborhoods.add(sourceMap.get(member)?.authorId); }
-    }
-    const matched = searchNodeIds ? new Set(searchNodeIds) : null;
-    if (matched) {
-      for (const source of state.corpus.records) if (matched.has(source.id)) { matched.add(source.authorId); matched.add(source.topicId); }
-    }
-    const lowerQuery = query.toLowerCase().trim();
-    const updates: any[] = nodeData.current.get().map(node => {
-      const id = String(node.id), s = sourceMap.get(id), lead = leadMap.get(id), topic = state.corpus.topics.find(t => t.id === id);
-      const authorSources = !s && !topic && !lead && id !== 'idea' ? authorMap.get(id) || [] : [];
-      const matchesTopic = !topicId || signalMap.get(id)?.topicId === topicId || s?.topicId === topicId || topic?.id === topicId || lead?.topicId === topicId || authorSources.some(s => s.topicId === topicId);
-      const matchesSource = s ? sourceFilters.includes(s.source) : signalMap.has(id) ? signalMap.get(id)!.sourceIds.some(id => sourceFilters.includes(sourceMap.get(id)?.source || '')) : authorSources.length ? authorSources.some(r => sourceFilters.includes(r.source)) : true;
-      const searchTerms = lowerQuery.split(/\s+/).filter(Boolean);
-      const signal = signalMap.get(id);
-      const matchesQuery = !lowerQuery || matched?.has(id) || searchTerms.every(term => `${s?.title || ''} ${s?.text || ''} ${lead?.name || ''} ${topic?.name || ''} ${signal?.label || ''} ${signal?.workflow || ''} ${signal?.problem || ''} ${signal?.desiredOutcome || ''}`.toLowerCase().includes(term));
-      const cited = references.current.has(id);
-      return { id, hidden: !cited && (!matchesTopic || !matchesSource), opacity: cited ? 1 : neighborhoods ? neighborhoods.has(id) ? 1 : .13 : !matchesQuery ? .12 : 1 };
-    });
-    nodeData.current.update(updates);
-    if (selected && nodeData.current.get(selected)) n.selectNodes([selected]); else n.unselectAll();
-    n.redraw();
+    const updateVisibility = () => {
+      // A cited record is always visible, including evidence beyond a person's first three sources.
+      for (const id of referencedIds) {
+        if (nodeData.current.get(id)) continue;
+        const source = state.corpus.records.find(r => r.id === id); if (!source) continue;
+        const owner = state.leads.find(l => l.sourceIds.includes(id));
+        const origin = owner ? n.getPositions([owner.id])[owner.id] : { x: -380, y: -150 };
+        const color = state.corpus.topics.find(t => t.id === source.topicId)?.color || '#b5a1ec';
+        const hash = [...id].reduce((sum, c) => sum + c.charCodeAt(0), 0);
+        nodeData.current.add({ id, x: (origin?.x || 0) + Math.cos(hash) * 90, y: (origin?.y || 0) + Math.sin(hash) * 90, size: 5, color: {background: color, border: color}, label: '' });
+        if (owner) edgeData.current.add({ id: `cited-author:${id}`, from: owner.id, to: id, color: {color: color + '66'} });
+      }
+      const sourceMap = new Map(state.corpus.records.map(s => [s.id, s]));
+      if (view === 'discover') {
+        const visibility = discoveryVisibility({ corpus: state.corpus, shortlists: state.shortlists, selected, query, searchNodeIds, relatedIds, referencedIds, pulseIds: [...pulses.current.keys()], topicId, sourceFilters });
+        focusedDiscovery.current = visibility.focused;
+        readableIds.current = visibility.visibleIds;
+        const scale = Math.max(.001, n.getScale()); lastSizedScale.current = scale;
+        nodeData.current.update(nodeData.current.get().map(node => {
+          const id = String(node.id);
+          if (!baseSizes.current.has(id)) baseSizes.current.set(id, node.size || 5);
+          const base = baseSizes.current.get(id)!;
+          const size = visibility.focused && visibility.visibleIds.has(id) ? Math.max(base, (minimumRadii.current.get(id) || 3.5) / scale) : base;
+          return { id, hidden: !visibility.visibleIds.has(id), opacity: 1, size };
+        }));
+        readableEdges.current = new Set();
+        const edgeUpdates = edgeData.current.get().flatMap(edge => {
+          const hidden = !visibility.visibleIds.has(String(edge.from)) || !visibility.visibleIds.has(String(edge.to));
+          const id = String(edge.id);
+          if (!baseWidths.current.has(id)) baseWidths.current.set(id, edge.width || .65);
+          if (!hidden) readableEdges.current.add(id);
+          const width = visibility.focused && !hidden ? Math.max(baseWidths.current.get(id)!, .55 / scale) : baseWidths.current.get(id)!;
+          return edge.hidden === hidden && edge.width === width ? [] : [{ id: edge.id!, hidden, width }];
+        });
+        if (edgeUpdates.length) edgeData.current.update(edgeUpdates);
+        if (selected && visibility.visibleIds.has(selected) && nodeData.current.get(selected)) n.selectNodes([selected]); else n.unselectAll();
+        n.redraw();
+        return;
+      }
+      focusedDiscovery.current = false;
+      const authorMap = new Map<string, typeof state.corpus.records>();
+      for (const source of state.corpus.records) { const records = authorMap.get(source.authorId) || []; records.push(source); authorMap.set(source.authorId, records); }
+      const signalMap = new Map((state.corpus.signals || []).map(s => [s.id, s]));
+      const leadMap = new Map(state.leads.map(l => [l.id, l]));
+      const signalMembers = signalMap.get(selected || '')?.sourceIds;
+      const neighborhoods = signalMembers ? new Set([selected, ...signalMembers, ...signalMembers.map(id => sourceMap.get(id)?.authorId)]) : selected && nodeData.current.get(selected) ? new Set([selected, ...n.getConnectedNodes(selected) as string[]]) : null;
+      if (neighborhoods) for (const id of relatedIds) {
+        neighborhoods.add(id);
+        const members = signalMap.get(id)?.sourceIds || (sourceMap.has(id) ? [id] : []);
+        for (const member of members) { neighborhoods.add(member); neighborhoods.add(sourceMap.get(member)?.authorId); }
+      }
+      const matched = searchNodeIds ? new Set(searchNodeIds) : null;
+      if (matched) {
+        for (const source of state.corpus.records) if (matched.has(source.id)) { matched.add(source.authorId); matched.add(source.topicId); }
+      }
+      const lowerQuery = query.toLowerCase().trim();
+      const updates: any[] = nodeData.current.get().map(node => {
+        const id = String(node.id), s = sourceMap.get(id), lead = leadMap.get(id), topic = state.corpus.topics.find(t => t.id === id);
+        const authorSources = !s && !topic && !lead && id !== 'idea' ? authorMap.get(id) || [] : [];
+        const matchesTopic = !topicId || signalMap.get(id)?.topicId === topicId || s?.topicId === topicId || topic?.id === topicId || lead?.topicId === topicId || authorSources.some(s => s.topicId === topicId);
+        const matchesSource = s ? sourceFilters.includes(s.source) : signalMap.has(id) ? signalMap.get(id)!.sourceIds.some(id => sourceFilters.includes(sourceMap.get(id)?.source || '')) : authorSources.length ? authorSources.some(r => sourceFilters.includes(r.source)) : true;
+        const searchTerms = lowerQuery.split(/\s+/).filter(Boolean);
+        const signal = signalMap.get(id);
+        const matchesQuery = !lowerQuery || matched?.has(id) || searchTerms.every(term => `${s?.title || ''} ${s?.text || ''} ${lead?.name || ''} ${topic?.name || ''} ${signal?.label || ''} ${signal?.workflow || ''} ${signal?.problem || ''} ${signal?.desiredOutcome || ''}`.toLowerCase().includes(term));
+        const cited = references.current.has(id);
+        return { id, hidden: !cited && (!matchesTopic || !matchesSource), opacity: cited ? 1 : neighborhoods ? neighborhoods.has(id) ? 1 : .13 : !matchesQuery ? .12 : 1 };
+      });
+      nodeData.current.update(updates);
+      if (selected && nodeData.current.get(selected)) n.selectNodes([selected]); else n.unselectAll();
+      n.redraw();
+    };
+    applyVisibility.current = updateVisibility;
+    updateVisibility();
+    return () => { if (applyVisibility.current === updateVisibility) applyVisibility.current = null; };
   }, [topicId, sourceFilters, selected, query, state, view, referenceKey, searchKey, relatedKey]);
   useEffect(() => {
     const temporary = edgeData.current.getIds().filter(id => String(id).startsWith('related-explore:'));
@@ -234,6 +304,7 @@ export const AtlasGraph = forwardRef<GraphHandle, Props>(function AtlasGraph({ s
     if (view !== 'discover' || !selected || !nodeData.current.get(selected)) return;
     edgeData.current.add(relatedIds.filter(id => id !== selected && nodeData.current.get(id)).map(id => ({
       id: `related-explore:${selected}:${id}`, from: selected, to: id,
+      hidden: Boolean(nodeData.current.get(selected)?.hidden || nodeData.current.get(id)?.hidden),
       dashes: [2, 8], color: { color: '#ffffff42', highlight: '#ffffff66' }, width: .9,
       title: 'Related meaning',
     })));
