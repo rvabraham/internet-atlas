@@ -1,3 +1,0 @@
-.env.local not found. Continuing without it.
-Internet Atlas: http://localhost:3000 (14127 public records)
-Node index: ready, 16238/16238
