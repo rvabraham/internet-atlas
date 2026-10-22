@@ -37,3 +37,10 @@ What does it cost? No paid data API calls were used. Embeddings run locally. GPT
 
 Remaining time
 Rehearse the complete sequence once, prepare the saved fallback, check submission requirements and submit with time to spare. Freeze new features unless the rehearsal exposes a blocking defect.
+
+Prepared local fallback
+A separate saved run is ready at http://localhost:3001. It has the completed product thesis, 16 requester leads, two drafts and the original model conversation. The active project stays at http://localhost:3000.
+If the fallback server is stopped, run this from the project directory:
+PORT=3001 ATLAS_DIRECTORY="$(cat .atlas/demo-workspace.txt)" npm start
+The demo-workspace pointer and saved workspace are local and ignored by Git. They are not included in the public repository. The repo includes the source corpus, screenshots and verification receipts.
+Prepared view: docs/demo-ready.png.
